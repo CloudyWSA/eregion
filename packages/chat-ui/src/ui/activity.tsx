@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import type { JobStatus, UiState } from '../store.js';
 import { JobCard, laneOf } from './job-card.js';
 
@@ -18,6 +18,16 @@ const PILL_STATE: Record<JobStatus, { text: string; cls: string }> = {
 export function Activity({ state, callbacks }: { state: UiState; callbacks: ActivityCallbacks }) {
   const [openDrawer, setOpenDrawer] = useState(false);
   const [freeText, setFreeText] = useState('');
+  // Accordion: um job expandido por vez; job novo rouba o foco (auto-follow).
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const lastSeen = useRef(0);
+  useEffect(() => {
+    const newest = state.jobs[state.jobs.length - 1];
+    if (newest && newest.id > lastSeen.current) {
+      lastSeen.current = newest.id;
+      setExpandedId(newest.id);
+    }
+  }, [state.jobs]);
   const active = state.jobs.filter((j) => j.status === 'queued' || j.status === 'running');
   const recentDone = state.jobs.filter((j) => j.status === 'done' || j.status === 'failed').slice(-2);
 
@@ -53,7 +63,15 @@ export function Activity({ state, callbacks }: { state: UiState; callbacks: Acti
                 Selecione componentes com <kbd>alt</kbd>+<kbd>s</kbd> e descreva a mudança na barra.
               </div>
             ) : (
-              state.jobs.map((job) => <JobCard key={job.id} job={job} onRevert={callbacks.onRevert} />)
+              state.jobs.map((job) => (
+                <JobCard
+                  key={job.id}
+                  job={job}
+                  expanded={expandedId === job.id}
+                  onToggle={() => setExpandedId(expandedId === job.id ? null : job.id)}
+                  onRevert={callbacks.onRevert}
+                />
+              ))
             )}
           </div>
           <div class="eg-drawer-foot">

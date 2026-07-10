@@ -38,6 +38,15 @@ export const EregionBuild = createUnplugin<BuildOptions | undefined>((options) =
   vite: {
     // Tagging expõe paths do repo — faz sentido apenas em dev.
     apply: 'serve',
+    config() {
+      return {
+        // Os packages do SDK são workspace/dist e mudam fora do controle do
+        // dep-optimizer — pré-bundlados, o browser roda versões velhas.
+        optimizeDeps: {
+          exclude: ['@eregion/overlay', '@eregion/chat-ui', '@eregion/adapter-react', '@eregion/adapter-angular'],
+        },
+      };
+    },
     transformIndexHtml() {
       const script = daemonConfigScript(options?.appName);
       if (!script) return [];

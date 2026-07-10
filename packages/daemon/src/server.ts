@@ -97,12 +97,19 @@ export class DaemonServer {
     });
     this.wss = new WebSocketServer({ server: this.http, path: '/ws' });
     this.wss.on('connection', (ws, req) => this.onConnection(ws, req));
+    // Sem handler, um EADDRINUSE re-emitido pelo wss derruba o processo antes
+    // do fallback de porta ter chance de tentar a próxima.
+    this.wss.on('error', () => undefined);
   }
 
   listen(port: number): Promise<void> {
     return new Promise((resolve, reject) => {
-      this.http.once('error', reject);
-      this.http.listen(port, '127.0.0.1', () => resolve());
+      const onError = (err: Error) => reject(err);
+      this.http.once('error', onError);
+      this.http.listen(port, '127.0.0.1', () => {
+        this.http.removeListener('error', onError);
+        resolve();
+      });
     });
   }
 

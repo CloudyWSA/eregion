@@ -10,7 +10,7 @@ const pedidos = [
 export function App() {
   return (
     <main style={{ fontFamily: 'system-ui', maxWidth: 720, margin: '0 auto', padding: 24 }}>
-      <Header titulo="Pedidos recentes" />
+      <Header titulo="Pedidos" />
       <section style={{ display: 'grid', gap: 12 }}>
         {pedidos.map((p) => (
           <OrderCard key={p.id} pedido={p} />

@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'preact/hooks';
 import type { Job, JobEvent, JobStatus } from '../store.js';
+import { Markdown } from './markdown.js';
 
 /**
- * Card de job com a "linha de forja": um spine vertical na cor do metal da
- * sessão (cobre/aço alternados entre jobs paralelos) com um nó por passo.
- * O nó do passo corrente pulsa (metal quente); passos prontos esfriam.
+ * Job em accordion: colapsado é uma linha compacta (dot, alvos, prompt,
+ * meta); expandido mostra a "linha de forja" — spine na cor do metal da
+ * sessão (cobre/aço) com um nó por passo — a resposta em markdown e as
+ * métricas. Um job expandido por vez: históricos longos não se atropelam.
  */
 
 export const LANES = ['copper', 'steel'] as const;
@@ -76,60 +78,60 @@ function Step({ ev, onRevert }: { ev: JobEvent; onRevert(id: string): void }) {
   );
 }
 
-export function JobCard({ job, onRevert }: { job: Job; onRevert(id: string): void }) {
+interface Props {
+  job: Job;
+  expanded: boolean;
+  onToggle(): void;
+  onRevert(id: string): void;
+}
+
+export function JobCard({ job, expanded, onToggle, onRevert }: Props) {
   const elapsed = useElapsed(job);
-  const open = job.status === 'running' || job.status === 'queued';
-  const [expanded, setExpanded] = useState<boolean | null>(null);
-  const showSteps = expanded ?? open;
-  const edits = job.events.filter((e) => e.kind === 'edit').length;
   const lane = laneOf(job);
+  const edits = job.events.filter((e) => e.kind === 'edit').length;
 
   return (
-    <article class={`eg-card eg-lane-${lane}`}>
-      <header class="eg-card-head">
+    <article class={`eg-card eg-lane-${lane} ${expanded ? 'eg-card-open' : ''}`}>
+      <button class="eg-card-head" onClick={onToggle} title={expanded ? 'Recolher' : 'Expandir'}>
         <span class={`eg-status-dot ${job.status}`} />
         <span class="eg-card-targets">
-          {job.targets.map((t, i) => (
+          {job.targets.slice(0, expanded ? undefined : 2).map((t, i) => (
             <span key={i} class="eg-chip">{t}</span>
           ))}
         </span>
+        {!expanded && <span class="eg-card-prompt-inline">{job.prompt}</span>}
         <span class="eg-card-meta">
           {job.modelName ? `${job.modelName} · ` : ''}{STATUS_VERB[job.status]} · {elapsed}
+          {!expanded && edits > 0 && ` · ✎${edits}`}
         </span>
-      </header>
+      </button>
 
-      <h3 class="eg-card-prompt">{job.prompt}</h3>
+      {expanded && (
+        <div class="eg-card-body">
+          <h3 class="eg-card-prompt">{job.prompt}</h3>
 
-      {job.events.length > 0 && !showSteps && (
-        <button class="eg-steps-summary" onClick={() => setExpanded(true)}>
-          {job.events.length} {job.events.length === 1 ? 'passo' : 'passos'}
-          {edits > 0 && ` · ${edits} ${edits === 1 ? 'edição' : 'edições'}`} ▸
-        </button>
-      )}
+          {job.events.length > 0 && (
+            <div class="eg-steps">
+              {job.events.map((ev, i) => (
+                <Step key={i} ev={ev} onRevert={onRevert} />
+              ))}
+            </div>
+          )}
 
-      {job.events.length > 0 && showSteps && (
-        <div class="eg-steps">
-          {job.events.map((ev, i) => (
-            <Step key={i} ev={ev} onRevert={onRevert} />
-          ))}
-          {!open && (
-            <button class="eg-steps-summary" onClick={() => setExpanded(false)}>recolher ▴</button>
+          {job.answer && (
+            <div class="eg-card-answer">
+              <Markdown text={job.answer} />
+              {job.status === 'running' && <span class="eg-cursor" />}
+            </div>
+          )}
+
+          {job.usage && (
+            <footer class="eg-card-foot">
+              {job.usage.outputTokens} tok · {((job.durationMs ?? 0) / 1000).toFixed(1)}s
+              {job.usage.costUsd !== undefined && ` · $${job.usage.costUsd.toFixed(3)}`}
+            </footer>
           )}
         </div>
-      )}
-
-      {job.answer && (
-        <p class="eg-card-answer">
-          {job.answer}
-          {job.status === 'running' && <span class="eg-cursor" />}
-        </p>
-      )}
-
-      {job.usage && (
-        <footer class="eg-card-foot">
-          {job.usage.outputTokens} tok · {((job.durationMs ?? 0) / 1000).toFixed(1)}s
-          {job.usage.costUsd !== undefined && ` · $${job.usage.costUsd.toFixed(3)}`}
-        </footer>
       )}
     </article>
   );
