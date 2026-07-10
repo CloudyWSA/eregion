@@ -1,0 +1,9 @@
+{
+  "name": "@spike/jsx-tagging-transform",
+  "version": "0.0.0",
+  "private": true,
+  "main": "babel-plugin-fc-src.cjs",
+  "dependencies": {
+    "@babel/core": "^7.25.0"
+  }
+}

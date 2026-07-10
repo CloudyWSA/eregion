@@ -1,0 +1,57 @@
+{
+  "name": "@eregion/next",
+  "version": "0.0.0",
+  "private": false,
+  "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./devtools": {
+      "types": "./dist/devtools.d.ts",
+      "default": "./dist/devtools.js"
+    },
+    "./instrumentation": {
+      "types": "./dist/instrumentation.d.ts",
+      "default": "./dist/instrumentation.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsup src/index.ts src/devtools.tsx src/instrumentation.ts --format esm --dts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@eregion/build": "workspace:*",
+    "@eregion/overlay": "workspace:*",
+    "@eregion/adapter-react": "workspace:*",
+    "@eregion/chat-ui": "workspace:*",
+    "@eregion/config": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "next": ">=14"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": false
+    },
+    "next": {
+      "optional": false
+    }
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.17"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/CloudyWSA/eregion.git"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "sessionId": "2f39958a-92b9-47a1-b172-97fab1752619",
+  "resumedSessionId": "2f39958a-92b9-47a1-b172-97fab1752619",
+  "rows": [
+    {
+      "session": "s2",
+      "turn": 1,
+      "prompt": "Without using any tools: what component did we discuss earlier? One word.",
+      "input_tokens": 10,
+      "cache_creation_input_tokens": 11461,
+      "cache_read_input_tokens": 17663,
+      "output_tokens": 48,
+      "total_cost_usd": 0.024938300000000004,
+      "num_turns": 1,
+      "answer": "PrimaryButton"
+    },
+    {
+      "session": "s2",
+      "turn": 2,
+      "prompt": "And what was its exact file path? One line.",
+      "input_tokens": 10,
+      "cache_creation_input_tokens": 1137,
+      "cache_read_input_tokens": 29124,
+      "output_tokens": 70,
+      "total_cost_usd": 0.030484700000000003,
+      "num_turns": 1,
+      "answer": "src/components/PrimaryButton.tsx"
+    }
+  ]
+}

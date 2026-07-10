@@ -1,0 +1,12 @@
+{
+  "sessionId": "2f39958a-92b9-47a1-b172-97fab1752619",
+  "subtype": "success",
+  "is_error": false,
+  "num_turns": 1,
+  "input_tokens": 10,
+  "cache_creation_input_tokens": 12938,
+  "cache_read_input_tokens": 17663,
+  "output_tokens": 53,
+  "total_cost_usd": 0.0279173,
+  "answer": "ok"
+}

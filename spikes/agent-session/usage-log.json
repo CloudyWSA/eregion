@@ -1,0 +1,83 @@
+{
+  "sessionId": "2f39958a-92b9-47a1-b172-97fab1752619",
+  "toolCalls": [
+    "ToolSearch",
+    "mcp__fieldsdk__get_selection",
+    "ToolSearch",
+    "mcp__fieldsdk__get_component_source"
+  ],
+  "rows": [
+    {
+      "session": "s1",
+      "turn": 1,
+      "prompt": "What component is currently selected? Use your tools. Answer in one short line.",
+      "input_tokens": 30,
+      "cache_creation_input_tokens": 8738,
+      "cache_read_input_tokens": 67104,
+      "output_tokens": 396,
+      "total_cost_usd": 0.026788399999999997,
+      "num_turns": 3,
+      "answer": "**PrimaryButton** (src/components/PrimaryButton.tsx, line 42)."
+    },
+    {
+      "session": "s1",
+      "turn": 2,
+      "prompt": "Show me its source code using your tools. One short sentence describing it.",
+      "input_tokens": 28,
+      "cache_creation_input_tokens": 1969,
+      "cache_read_input_tokens": 82509,
+      "output_tokens": 310,
+      "total_cost_usd": 0.040555299999999996,
+      "num_turns": 3,
+      "answer": "A simple button component that renders with primary styling and accepts label and click handler props."
+    },
+    {
+      "session": "s1",
+      "turn": 3,
+      "prompt": "In one short sentence, what does this component do?",
+      "input_tokens": 10,
+      "cache_creation_input_tokens": 65,
+      "cache_read_input_tokens": 28370,
+      "output_tokens": 118,
+      "total_cost_usd": 0.044122299999999996,
+      "num_turns": 1,
+      "answer": "Renders a styled button that displays a label and triggers a callback when clicked."
+    },
+    {
+      "session": "s1",
+      "turn": 4,
+      "prompt": "What file and line was the selection at? One line.",
+      "input_tokens": 10,
+      "cache_creation_input_tokens": 140,
+      "cache_read_input_tokens": 28435,
+      "output_tokens": 78,
+      "total_cost_usd": 0.047645799999999995,
+      "num_turns": 1,
+      "answer": "src/components/PrimaryButton.tsx, line 42."
+    },
+    {
+      "session": "s1",
+      "turn": 5,
+      "prompt": "Reply with only the word: ok",
+      "input_tokens": 10,
+      "cache_creation_input_tokens": 95,
+      "cache_read_input_tokens": 28575,
+      "output_tokens": 27,
+      "total_cost_usd": 0.050838299999999996,
+      "num_turns": 1,
+      "answer": "ok"
+    },
+    {
+      "session": "s1",
+      "turn": 6,
+      "prompt": "One word: was a button or a card selected?",
+      "input_tokens": 10,
+      "cache_creation_input_tokens": 48,
+      "cache_read_input_tokens": 28670,
+      "output_tokens": 49,
+      "total_cost_usd": 0.054056299999999995,
+      "num_turns": 1,
+      "answer": "button"
+    }
+  ]
+}
