@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { TAG_ATTR } from '@eregion/protocol';
 import { tagJsx } from './transform.js';
 
-// root fixo para paths determinísticos nos testes
+// fixed root for deterministic paths in tests
 const ROOT = path.resolve('/tmp/fake-repo');
 const file = (rel: string) => path.join(ROOT, rel);
 const opts = { root: ROOT };
@@ -11,7 +11,7 @@ const opts = { root: ROOT };
 const APP = `export function App() {
   return (
     <main>
-      <h1 className="title">Olá</h1>
+      <h1 className="title">Hello</h1>
       <Card />
       <Foo.Bar />
     </main>
@@ -20,28 +20,28 @@ const APP = `export function App() {
 `;
 
 describe('tagJsx', () => {
-  it('tagueia tags host com path relativo e linha:coluna 1-based', async () => {
+  it('tags host tags with a relative path and 1-based line:column', async () => {
     const res = await tagJsx(APP, file('src/App.tsx'), opts);
-    // <main> está na linha 3, coluna 5 (1-based)
+    // <main> is at line 3, column 5 (1-based)
     expect(res!.code).toContain(`${TAG_ATTR}="src/App.tsx:3:5"`);
-    // <h1> na linha 4, coluna 7
+    // <h1> at line 4, column 7
     expect(res!.code).toContain(`${TAG_ATTR}="src/App.tsx:4:7"`);
   });
 
-  it('não tagueia componentes nem member expressions', async () => {
+  it('does not tag components or member expressions', async () => {
     const res = await tagJsx(APP, file('src/App.tsx'), opts);
     expect(res!.code).not.toMatch(/<Card [^>]*data-eg-src/);
     expect(res!.code).not.toMatch(/<Foo\.Bar [^>]*data-eg-src/);
   });
 
-  it('não duplica atributo existente', async () => {
-    const code = `export const X = () => <div data-eg-src="ja/tem.tsx:1:1" />;`;
+  it('does not duplicate an existing attribute', async () => {
+    const code = `export const X = () => <div data-eg-src="already/has.tsx:1:1" />;`;
     const res = await tagJsx(code, file('src/X.tsx'), opts);
     expect(res!.code.match(/data-eg-src/g)).toHaveLength(1);
-    expect(res!.code).toContain('ja/tem.tsx:1:1');
+    expect(res!.code).toContain('already/has.tsx:1:1');
   });
 
-  it('respeita exclude', async () => {
+  it('respects exclude', async () => {
     const res = await tagJsx(APP, file('src/design-system/Button.tsx'), {
       ...opts,
       exclude: (rel) => rel.startsWith('src/design-system/'),
@@ -49,17 +49,17 @@ describe('tagJsx', () => {
     expect(res!.code).not.toContain(TAG_ATTR);
   });
 
-  it('processa .jsx (sem TypeScript)', async () => {
-    const res = await tagJsx(`export const Y = () => <span>oi</span>;`, file('src/Y.jsx'), opts);
+  it('processes .jsx (without TypeScript)', async () => {
+    const res = await tagJsx(`export const Y = () => <span>hi</span>;`, file('src/Y.jsx'), opts);
     expect(res!.code).toContain(`${TAG_ATTR}="src/Y.jsx:1:24"`);
   });
 
-  it('ignora arquivos que não são JSX e node_modules', async () => {
+  it('ignores non-JSX files and node_modules', async () => {
     expect(await tagJsx('const a = 1;', file('src/a.ts'), opts)).toBeNull();
     expect(await tagJsx(APP, file('node_modules/lib/App.tsx'), opts)).toBeNull();
   });
 
-  it('preserva TypeScript (generics, tipos) sem quebrar', async () => {
+  it('preserves TypeScript (generics, types) without breaking', async () => {
     const code = `export function List<T>({ items }: { items: T[] }) {
   return <ul>{items.map((i, n) => <li key={n}>{String(i)}</li>)}</ul>;
 }
@@ -70,7 +70,7 @@ describe('tagJsx', () => {
     expect(res!.code).toMatch(/<li key=\{n\} data-eg-src/);
   });
 
-  it('emite sourcemap', async () => {
+  it('emits a sourcemap', async () => {
     const res = await tagJsx(APP, file('src/App.tsx'), opts);
     expect(res!.map).toBeTruthy();
   });

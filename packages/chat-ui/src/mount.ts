@@ -14,12 +14,6 @@ interface JobAnchor {
   open: boolean;
 }
 
-/**
- * Tudo acontece junto ao componente: o prompt abre ancorado no clicado e,
- * no Enter, vira o popover do job no mesmo lugar. Vários jobs = vários
- * popovers, cada um no seu componente. Fechar um popover não cancela o
- * job — ele vira uma pill na tray até terminar.
- */
 export function mountChat(overlay: EregionDevtoolsElement): HTMLElement | null {
   if (typeof document === 'undefined') return null;
   const existing = document.querySelector(CHAT_TAG);
@@ -47,7 +41,7 @@ export function mountChat(overlay: EregionDevtoolsElement): HTMLElement | null {
       ? areaAnchor(area)
       : selected[selected.length - 1]?.element;
     const targets = [
-      ...(area ? [area.container ? `área em ${area.container.name}` : 'área livre'] : []),
+      ...(area ? [area.container ? `area in ${area.container.name}` : 'free area'] : []),
       ...selected.map((s) => s.name),
     ];
     const job = store.dispatch(prompt, targets.length > 0 ? targets : ['app']);
@@ -61,7 +55,6 @@ export function mountChat(overlay: EregionDevtoolsElement): HTMLElement | null {
         ...(job.model ? { model: job.model } : {}),
       },
     });
-    // A seleção virou job ancorado — libera o clique para o próximo componente.
     overlay.engine.clear();
     rerender();
   };

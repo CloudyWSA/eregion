@@ -2,7 +2,7 @@
 import { formatTagValue, TAG_ATTR } from '@eregion/protocol';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-// jsdom não implementa elementsFromPoint; o engine recebe o resultado dele.
+// jsdom does not implement elementsFromPoint; the engine consumes its result.
 function mockPoint(...els: Element[]): void {
   document.elementsFromPoint = () => els;
 }
@@ -15,11 +15,11 @@ function setTag(el: Element, file: string, line: number, column = 1): void {
 }
 
 describe('domAdapter', () => {
-  it('resolve pelo ancestral mais próximo com o atributo', () => {
-    document.body.innerHTML = `<main><section><button id="alvo">ok</button></section></main>`;
+  it('resolves via the nearest ancestor carrying the attribute', () => {
+    document.body.innerHTML = `<main><section><button id="target">ok</button></section></main>`;
     const section = document.querySelector('section')!;
     setTag(section, 'src/components/OrderList.tsx', 12, 3);
-    const hit = domAdapter.resolve(document.getElementById('alvo')!);
+    const hit = domAdapter.resolve(document.getElementById('target')!);
     expect(hit).toMatchObject({
       element: section,
       name: 'OrderList',
@@ -28,9 +28,9 @@ describe('domAdapter', () => {
     });
   });
 
-  it('retorna null sem atributo no caminho', () => {
-    document.body.innerHTML = `<div id="solto"></div>`;
-    expect(domAdapter.resolve(document.getElementById('solto')!)).toBeNull();
+  it('returns null when no attribute is on the path', () => {
+    document.body.innerHTML = `<div id="loose"></div>`;
+    expect(domAdapter.resolve(document.getElementById('loose')!)).toBeNull();
   });
 });
 
@@ -39,11 +39,11 @@ describe('SelectionEngine', () => {
     clearAdapters();
     registerAdapter(domAdapter);
     document.body.innerHTML = `
-      <main id="raiz">
-        <button id="b1">um</button>
-        <button id="b2">dois</button>
+      <main id="root">
+        <button id="b1">one</button>
+        <button id="b2">two</button>
       </main>`;
-    setTag(document.getElementById('raiz')!, 'src/App.tsx', 3);
+    setTag(document.getElementById('root')!, 'src/App.tsx', 3);
     setTag(document.getElementById('b1')!, 'src/Button.tsx', 8);
     setTag(document.getElementById('b2')!, 'src/Button.tsx', 8);
   });
@@ -56,7 +56,7 @@ describe('SelectionEngine', () => {
     return engine;
   }
 
-  it('click seleciona; shift+click adiciona e remove', () => {
+  it('click selects; shift+click adds and removes', () => {
     const b1 = document.getElementById('b1')!;
     const b2 = document.getElementById('b2')!;
     const engine = engineAt(b1);
@@ -72,7 +72,7 @@ describe('SelectionEngine', () => {
     expect(engine.getState().selected.map((s) => s.element)).toEqual([b1]);
   });
 
-  it('Escape limpa a seleção e desativa', () => {
+  it('Escape clears the selection and deactivates', () => {
     const b1 = document.getElementById('b1')!;
     const engine = engineAt(b1);
     b1.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -80,7 +80,7 @@ describe('SelectionEngine', () => {
     expect(engine.getState()).toMatchObject({ selected: [], active: false });
   });
 
-  it('buildPayload gera ids sequenciais e payload válido no protocolo', async () => {
+  it('buildPayload generates sequential ids and a protocol-valid payload', async () => {
     const b1 = document.getElementById('b1')!;
     const b2 = document.getElementById('b2')!;
     const engine = engineAt(b1);
@@ -88,13 +88,13 @@ describe('SelectionEngine', () => {
     mockPoint(b2);
     b2.dispatchEvent(new MouseEvent('click', { bubbles: true, shiftKey: true }));
 
-    const payload = engine.buildPayload({ framework: 'react', name: 'app-teste', route: '/' });
+    const payload = engine.buildPayload({ framework: 'react', name: 'test-app', route: '/' });
     expect(payload.selection.map((s) => s.id)).toEqual(['s1', 's2']);
     const { SelectionPayload } = await import('@eregion/protocol');
     expect(SelectionPayload.safeParse(payload).success).toBe(true);
   });
 
-  it('hover numa instância acende as irmãs do mesmo componente (hoverKin)', () => {
+  it('hovering one instance lights the siblings of the same component (hoverKin)', () => {
     document.body.innerHTML = `
       <main>
         <article id="c1">a</article>
@@ -113,17 +113,17 @@ describe('SelectionEngine', () => {
     expect(state.hoverKin.map((e) => e.id).sort()).toEqual(['c1', 'c3']);
   });
 
-  it('marquee: área pega afetados por interseção e o container por contenção', () => {
+  it('marquee: area picks affected by intersection and the container by containment', () => {
     document.body.innerHTML = `
-      <main id="raiz">
+      <main id="root">
         <article id="c1">a</article>
         <article id="c2">b</article>
       </main>`;
-    setTag(document.getElementById('raiz')!, 'src/App.tsx', 3, 1);
+    setTag(document.getElementById('root')!, 'src/App.tsx', 3, 1);
     setTag(document.getElementById('c1')!, 'src/Card.tsx', 9, 5);
     setTag(document.getElementById('c2')!, 'src/Card.tsx', 9, 5);
     const rects: Record<string, DOMRect> = {
-      raiz: new DOMRect(0, 0, 800, 600),
+      root: new DOMRect(0, 0, 800, 600),
       c1: new DOMRect(20, 20, 200, 80),
       c2: new DOMRect(20, 120, 200, 80),
     };
@@ -131,7 +131,7 @@ describe('SelectionEngine', () => {
       (document.getElementById(id) as HTMLElement).getBoundingClientRect = () => rect;
     }
     const engine = new SelectionEngine();
-    mockPoint(document.getElementById('raiz')!);
+    mockPoint(document.getElementById('root')!);
     engine.enable();
 
     document.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, clientX: 10, clientY: 10, button: 0 }));
@@ -149,7 +149,7 @@ describe('SelectionEngine', () => {
     expect(payload.app.components).toContainEqual({ name: 'Card', src: { file: 'src/Card.tsx', line: 9, column: 5 }, count: 2 });
   });
 
-  it('cursor sobre a UI do Eregion não gera hit (não seleciona o que está atrás)', () => {
+  it('cursor over Eregion UI yields no hit (does not select what is behind)', () => {
     const overlayEl = document.createElement('eregion-chat');
     document.body.appendChild(overlayEl);
     const engine = new SelectionEngine();
@@ -157,7 +157,7 @@ describe('SelectionEngine', () => {
     expect(engine.hitTest(0, 0)).toBeNull();
   });
 
-  it('clique sobre a UI do Eregion não é interceptado (botões dos popovers funcionam)', () => {
+  it('click over Eregion UI is not intercepted (popover buttons work)', () => {
     const chatEl = document.createElement('eregion-chat');
     document.body.appendChild(chatEl);
     const engine = new SelectionEngine();

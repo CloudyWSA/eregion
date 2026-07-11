@@ -2,10 +2,11 @@ import { query } from '@anthropic-ai/claude-agent-sdk';
 import type { ModelOption } from '@eregion/protocol';
 
 /**
- * Descobre os modelos permitidos pela conta do dev perguntando ao próprio
- * Claude Code (Query.supportedModels) — a lista nunca é hardcoded e reflete
- * plano/managed settings vigentes. A sonda usa um prompt que nunca produz
- * mensagem: o canal de controle responde antes do primeiro turn, custo zero.
+ * Discovers the models allowed by the dev's account by asking Claude Code
+ * itself (Query.supportedModels) — the list is never hardcoded and reflects
+ * the active plan/managed settings. The probe uses a prompt that never
+ * produces a message: the control channel replies before the first turn, at
+ * zero cost.
  */
 export async function discoverModels(cwd: string): Promise<ModelOption[]> {
   const never = (async function* () {
@@ -16,7 +17,7 @@ export async function discoverModels(cwd: string): Promise<ModelOption[]> {
     const models = await probe.supportedModels();
     return models.map((m) => ({ id: m.value, name: m.displayName }));
   } catch {
-    return []; // sem lista o seletor some; jobs seguem no modelo default
+    return []; // no list → the selector disappears; jobs keep the default model
   } finally {
     await probe.interrupt().catch(() => undefined);
   }

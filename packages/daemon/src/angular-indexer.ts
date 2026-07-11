@@ -3,41 +3,39 @@ import { dirname, join, relative } from 'node:path';
 import { Node, Project, type Decorator } from 'ts-morph';
 import type { AngularComponentEntry, AngularIndex } from '@eregion/protocol';
 
-// Diretórios que nunca contêm fonte de app relevante — pular corta o custo do
-// scan (o achado do spike: só ~889 de 2718 .ts do app real interessam).
+// Directories that never hold relevant app source — skipping them cuts the scan cost.
 const SKIP_DIRS = new Set(['node_modules', 'dist', '.git', '.turbo', 'coverage', '.angular', '.eregion']);
 const STALE_CHECK_THROTTLE_MS = 1_000;
 
 interface ProjectRoot {
   name: string;
-  /** Path relativo ao repoRoot, em separador posix; '' = raiz do repo. */
+  /** Path relative to repoRoot, posix separators; '' = repo root. */
   root: string;
 }
 
 /**
- * Índice estático de componentes/diretivas Angular (parse sintático com ts-morph
- * dos decorators @Component/@Directive — o build do app não é tocado). Portado
- * do spike `spikes/angular-indexer`, adaptado para varrer o repoRoot do daemon,
- * carimbar o projeto de origem (angular.json) e servir o índice em cache.
+ * Static index of Angular components/directives (syntactic ts-morph parse of
+ * @Component/@Directive decorators — the app build is not touched). Stamps
+ * each entry with its origin project (angular.json) and serves a cached index.
  */
 export class AngularIndexer {
   private cache: AngularIndex | null = null;
-  /** mtime dos arquivos indexados na última build (para invalidação barata). */
+  /** mtimes of indexed files from the last build (for cheap invalidation). */
   private mtimes = new Map<string, number>();
   private lastCheckMs = 0;
   private watcher: FSWatcher | null = null;
 
   constructor(private readonly repoRoot: string) {}
 
-  /** Força uma reconstrução completa e devolve o índice. */
+  /** Forces a full rebuild and returns the index. */
   build(): AngularIndex {
     return this.rebuild();
   }
 
   /**
-   * Índice em cache. Reconstrói na primeira chamada e quando um arquivo já
-   * indexado mudou de mtime (checagem estrangulada a 1×/s). Arquivos novos são
-   * capturados pelo `watch()` opcional, que invalida o cache.
+   * Cached index. Rebuilds on the first call and when an already-indexed file
+   * changed mtime (check throttled to 1×/s). New files are caught by the
+   * optional watch(), which invalidates the cache.
    */
   getIndex(): AngularIndex {
     if (!this.cache) return this.rebuild();
@@ -50,9 +48,10 @@ export class AngularIndexer {
   }
 
   /**
-   * Observa o repoRoot e invalida o cache quando .ts/.html/angular.json mudam.
-   * fs.watch recursivo não existe em todo SO; em falha, degrada para no-op (a
-   * checagem de mtime em getIndex ainda cobre edições de arquivos já indexados).
+   * Watches repoRoot and invalidates the cache when .ts/.html/angular.json
+   * change. Recursive fs.watch isn't available on every OS; on failure it
+   * degrades to a no-op (getIndex's mtime check still covers edits to
+   * already-indexed files).
    */
   watch(): () => void {
     let timer: ReturnType<typeof setTimeout> | null = null;
@@ -80,8 +79,8 @@ export class AngularIndexer {
   private rebuild(): AngularIndex {
     const files = this.collectCandidates();
     const projects = this.readProjects();
-    // ts-morph sintático puro: sem tsconfig, sem type-checker; libera cada
-    // SourceFile após extrair para não segurar 900 ASTs na memória.
+    // Pure syntactic ts-morph: no tsconfig, no type-checker; releases each
+    // SourceFile after extracting so we don't hold 900 ASTs in memory.
     const project = new Project({
       skipAddingFilesFromTsConfig: true,
       skipFileDependencyResolution: true,
@@ -99,7 +98,7 @@ export class AngularIndexer {
           const decName = dec.getName();
           if (decName !== 'Component' && decName !== 'Directive') continue;
           const meta = readDecorator(dec);
-          // Linha da declaração da classe (não do decorator, que a antecede).
+          // Line of the class declaration (not the decorator, which precedes it).
           const line = cls.getNameNode()?.getStartLineNumber() ?? cls.getStartLineNumber();
           const entry: AngularComponentEntry = {
             className: cls.getName() ?? '(anonymous)',
@@ -123,7 +122,7 @@ export class AngularIndexer {
     return this.cache;
   }
 
-  /** Reconstrói só se um arquivo já indexado sumiu ou mudou de mtime. */
+  /** Rebuilds only if an indexed file vanished or changed mtime. */
   private isStale(): boolean {
     for (const [file, prev] of this.mtimes) {
       if (safeMtime(file) !== prev) return true;
@@ -132,9 +131,9 @@ export class AngularIndexer {
   }
 
   /**
-   * Arquivos .ts (fora de SKIP_DIRS, .d.ts e .spec.ts) que mencionam os
-   * decorators. Pré-filtro por substring evita entregar 2/3 dos arquivos ao
-   * ts-morph — o gargalo real é o parse, não a leitura.
+   * .ts files (outside SKIP_DIRS, .d.ts and .spec.ts) that mention the
+   * decorators. The substring pre-filter avoids handing 2/3 of the files to
+   * ts-morph — the real bottleneck is the parse, not the read.
    */
   private collectCandidates(): string[] {
     const out: string[] = [];
@@ -170,9 +169,9 @@ export class AngularIndexer {
   }
 
   /**
-   * Projetos declarados no(s) angular.json do repo. Monorepos Angular têm mais
-   * de um app `application` (monorepos Angular costumam ter apps quase-duplicados),
-   * quase-duplicados — o projeto de origem é o que permite desambiguar depois.
+   * Projects declared in the repo's angular.json file(s). Angular monorepos
+   * often have several near-duplicate apps — the origin project is what lets
+   * us disambiguate later.
    */
   private readProjects(): ProjectRoot[] {
     const result: ProjectRoot[] = [];
@@ -191,7 +190,7 @@ export class AngularIndexer {
         result.push({ name, root: toPosix(relative(this.repoRoot, join(base, root))) });
       }
     }
-    // Root mais específico primeiro, para o match por prefixo escolher o certo.
+    // Most specific root first, so the prefix match picks the right one.
     result.sort((a, b) => b.root.length - a.root.length);
     return result;
   }
@@ -222,7 +221,7 @@ export class AngularIndexer {
 function projectOf(rel: string, projects: ProjectRoot[]): string | undefined {
   for (const p of projects) {
     if (p.root === '') {
-      // angular.json na raiz sem `root` declarado: só casa se for o único projeto.
+      // angular.json at the root with no declared `root`: matches only if it's the single project.
       if (projects.length === 1) return p.name;
       continue;
     }
@@ -266,7 +265,7 @@ function safeMtime(file: string): number {
   }
 }
 
-/** Normaliza separadores para posix — o SourceRef trafega no protocolo. */
+/** Normalizes separators to posix — the SourceRef travels over the protocol. */
 function toPosix(p: string): string {
   return p.split('\\').join('/');
 }

@@ -1,10 +1,3 @@
-/**
- * Sistema visual do Eregion — "instrumento de medição": chrome claro e
- * neutro pousado sobre o app (funciona em host claro ou escuro), toda a
- * tipografia operacional em mono 11px, UM acento bronze contido. Sem
- * gradientes, sem glow; uma única sombra crisp. Assinatura: o notch de
- * ancoragem apontando para o componente.
- */
 export const TOKENS = `
   --eg-srf: #fbfbfc;
   --eg-srf-2: #f2f2f5;
@@ -30,7 +23,7 @@ button:focus-visible { outline: 1px solid var(--eg-accent); outline-offset: 1px;
   * { animation: none !important; transition: none !important; }
 }
 
-/* ---- popover ancorado: nasce do notch que aponta o componente ---- */
+/* ---- anchored popover ---- */
 .eg-pop {
   position: fixed;
   z-index: 2147483647;
@@ -58,7 +51,7 @@ button:focus-visible { outline: 1px solid var(--eg-accent); outline-offset: 1px;
 }
 .eg-pop[data-place='below'] .eg-notch { top: -4px; }
 .eg-pop[data-place='above'] .eg-notch { bottom: -4px; }
-/* arrastou = janela livre: o notch (que apontava o componente) some */
+/* dragged = free window: the notch disappears */
 .eg-pop[data-detached] .eg-notch { display: none; }
 .eg-drag { cursor: grab; user-select: none; }
 .eg-drag:active { cursor: grabbing; }
@@ -69,7 +62,6 @@ button:focus-visible { outline: 1px solid var(--eg-accent); outline-offset: 1px;
   width: 14px;
   height: 14px;
   cursor: nwse-resize;
-  /* três traços diagonais discretos */
   background:
     linear-gradient(135deg, transparent 6px, var(--eg-line) 6px, var(--eg-line) 7px, transparent 7px),
     linear-gradient(135deg, transparent 9px, var(--eg-line) 9px, var(--eg-line) 10px, transparent 10px);
@@ -78,7 +70,7 @@ button:focus-visible { outline: 1px solid var(--eg-accent); outline-offset: 1px;
 .eg-pop[data-sized] .eg-job { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .eg-pop[data-sized] .eg-job-body { max-height: none; flex: 1; min-height: 0; }
 
-/* ---- estado prompt ---- */
+/* ---- prompt state ---- */
 .eg-ask { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; }
 .eg-ask-row { display: flex; align-items: center; gap: 6px; }
 .eg-chips { display: flex; gap: 4px; flex-wrap: wrap; flex: 1; min-width: 0; }
@@ -119,7 +111,7 @@ button:focus-visible { outline: 1px solid var(--eg-accent); outline-offset: 1px;
 .eg-ask-input::placeholder { color: var(--eg-muted); }
 .eg-ask-hint { color: var(--eg-muted); font-size: 10px; text-align: right; }
 
-/* ---- estado job ---- */
+/* ---- job state ---- */
 .eg-job { display: flex; flex-direction: column; }
 .eg-job-head {
   display: flex;
@@ -206,7 +198,7 @@ button:focus-visible { outline: 1px solid var(--eg-accent); outline-offset: 1px;
   padding: 5px 10px;
 }
 
-/* ---- markdown da resposta (prosa em sans, resto mono) ---- */
+/* ---- answer markdown (prose in sans, rest mono) ---- */
 .eg-md { display: flex; flex-direction: column; gap: 6px; font: var(--eg-prose); color: var(--eg-ink); }
 .eg-md-p { margin: 0; white-space: pre-wrap; }
 .eg-md-h { font-weight: 600; }
@@ -255,7 +247,7 @@ button:focus-visible { outline: 1px solid var(--eg-accent); outline-offset: 1px;
   margin-right: 4px;
 }
 
-/* ---- pills na taskbar p/ jobs com popover fechado ---- */
+/* ---- taskbar pills for jobs with a closed popover ---- */
 .eg-tray {
   position: fixed;
   right: 16px;
@@ -280,7 +272,7 @@ button:focus-visible { outline: 1px solid var(--eg-accent); outline-offset: 1px;
 }
 .eg-tray-prompt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* ---- modal de aprovação ---- */
+/* ---- approval modal ---- */
 .eg-scrim {
   position: fixed;
   inset: 0;

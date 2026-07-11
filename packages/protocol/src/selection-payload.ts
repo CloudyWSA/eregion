@@ -3,9 +3,9 @@ import { z } from 'zod';
 export const PROTOCOL_VERSION = 1 as const;
 
 /**
- * Referência a uma posição em um arquivo fonte, sempre relativa ao root do
- * repositório (nunca absoluta — o payload trafega entre máquina e browser).
- * line/column são 1-based (convenção de editor, não de Babel).
+ * Position in a source file, always relative to the repo root (never absolute —
+ * the payload travels between machine and browser). line/column are 1-based
+ * (editor convention, not Babel's).
  */
 export const SourceRef = z.object({
   file: z.string().min(1),
@@ -15,31 +15,31 @@ export const SourceRef = z.object({
 export type SourceRef = z.infer<typeof SourceRef>;
 
 export const HttpActivity = z.object({
-  /** Resumo humano-legível: "GET /api/orders?status=open → 200 (142ms)" */
+  /** Human-readable summary: "GET /api/orders?status=open → 200 (142ms)" */
   req: z.string(),
   traceId: z.string().optional(),
-  /** Call site que originou a request, quando atribuível */
+  /** Call site that issued the request, when attributable */
   origin: SourceRef.optional(),
 });
 export type HttpActivity = z.infer<typeof HttpActivity>;
 
 /**
- * Um componente selecionado, já resumido pelo overlay. Valores de props/state
- * chegam como strings truncadas — o detalhe completo fica atrás de `refs`,
- * expansível sob demanda pelo daemon (nunca embutido no payload).
+ * A selected component, already summarized by the overlay. Prop/state values
+ * arrive as truncated strings — full detail lives behind `refs`, expanded on
+ * demand by the daemon (never inlined in the payload).
  */
 export const SelectedComponent = z.object({
-  /** Estável durante a seleção corrente: "s1", "s2", … */
+  /** Stable during the current selection: "s1", "s2", … */
   id: z.string().min(1),
   name: z.string().min(1),
   framework: z.enum(['react', 'angular']),
-  /** Classe/função do componente */
+  /** Component class/function */
   src: SourceRef.optional(),
-  /** Elemento clicado no template/JSX */
+  /** Element clicked in the template/JSX */
   tpl: SourceRef.optional(),
   dom: z.object({
     tag: z.string(),
-    /** [x, y, largura, altura] em px na viewport */
+    /** [x, y, width, height] in px in the viewport */
     rect: z.tuple([z.number(), z.number(), z.number(), z.number()]),
     text: z.string().max(80).optional(),
   }),
@@ -47,21 +47,21 @@ export const SelectedComponent = z.object({
   state: z.record(z.string()).optional(),
   /** "OrderService → src/app/orders/order.service.ts" */
   deps: z.array(z.string()).optional(),
-  /** Com dedupe: "OrderRowComponent ×12 → src/app/orders/order-row/…:9" */
+  /** deduped: "OrderRowComponent ×12 → src/app/orders/order-row/…:9" */
   children: z.array(z.string()).optional(),
   http: z.array(HttpActivity).optional(),
-  /** Chaves expansíveis: fullProps, fullState, domHtml, trace:<id> */
+  /** Expandable keys: fullProps, fullState, domHtml, trace:<id> */
   refs: z.record(z.string()).optional(),
 });
 export type SelectedComponent = z.infer<typeof SelectedComponent>;
 
 /**
- * Área desenhada pelo dev (marquee): pode cobrir componentes (adaptá-los) ou
- * espaço vazio (criar algo ali). O container é o elemento tagueado mais
- * interno que contém a área inteira — o ponto de inserção no código.
+ * Marquee area drawn by the dev: may cover components (adapt them) or empty
+ * space (create something there). The container is the innermost tagged element
+ * that fully contains the area — the code insertion point.
  */
 export const AreaSelection = z.object({
-  /** [x, y, largura, altura] na viewport no momento da captura */
+  /** [x, y, width, height] in the viewport at capture time */
   rect: z.tuple([z.number(), z.number(), z.number(), z.number()]),
   container: z
     .object({ name: z.string(), src: SourceRef })
@@ -69,7 +69,7 @@ export const AreaSelection = z.object({
 });
 export type AreaSelection = z.infer<typeof AreaSelection>;
 
-/** Componente presente na página (inventário compacto p/ contexto lazy). */
+/** Component present on the page (compact inventory for lazy context). */
 export const PageComponent = z.object({
   name: z.string(),
   src: SourceRef,
@@ -83,7 +83,7 @@ export const SelectionPayload = z.object({
     framework: z.string(),
     name: z.string().optional(),
     route: z.string().optional(),
-    /** Componentes únicos renderizados na página corrente, com contagem. */
+    /** Unique components rendered on the current page, with count. */
     components: z.array(PageComponent).optional(),
   }),
   selection: z.array(SelectedComponent),

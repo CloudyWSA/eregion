@@ -1,26 +1,22 @@
 import path from 'node:path';
 import { transformAsync, types as t, type BabelFileResult, type PluginObj, type PluginPass } from '@babel/core';
-// @ts-expect-error sem types publicados; plugin só de sintaxe
+// @ts-expect-error no published types; syntax-only plugin
 import syntaxJsx from '@babel/plugin-syntax-jsx';
-// @ts-expect-error sem types publicados; plugin só de sintaxe
+// @ts-expect-error no published types; syntax-only plugin
 import syntaxTypescript from '@babel/plugin-syntax-typescript';
 import { findRepoRoot } from '@eregion/config';
 import { formatTagValue, TAG_ATTR } from '@eregion/protocol';
 
 export interface TagOptions {
-  /**
-   * Base para os paths relativos gravados no atributo. Default: root do
-   * repositório (primeiro diretório com .git subindo a partir do arquivo);
-   * fallback process.cwd().
-   */
+  /** Base for the relative paths written to the attribute. Default: repo root. */
   root?: string;
-  /** Arquivos cujo path relativo satisfizer o predicado não são tagueados. */
+  /** Files whose relative path matches the predicate are not tagged. */
   exclude?: (relPath: string) => boolean;
 }
 
 function isHostTag(tag: string): boolean {
   const first = tag.charCodeAt(0);
-  return first >= 97 && first <= 122; // a-z: host element; maiúscula = componente
+  return first >= 97 && first <= 122; // a-z: host element; uppercase = component
 }
 
 interface State extends PluginPass {
@@ -28,10 +24,10 @@ interface State extends PluginPass {
 }
 
 /**
- * Injeta TAG_ATTR (contrato em @eregion/protocol) em todo JSXOpeningElement
- * de tag host. Componentes (<Card/>) e member expressions (<Foo.Bar/>) ficam
- * de fora: o call site deles já é tagueado no JSX do pai, que é onde o dev
- * quer editar. Linha/coluna 1-based (loc do Babel é 0-based em coluna).
+ * Injects TAG_ATTR (contract in @eregion/protocol) into every host-tag
+ * JSXOpeningElement. Components (<Card/>) and member expressions (<Foo.Bar/>)
+ * are left out: their call site is already tagged in the parent JSX, which is
+ * where the dev wants to edit. Line/column are 1-based (Babel's column is 0-based).
  */
 export function eregionTagPlugin(): PluginObj<State> {
   return {

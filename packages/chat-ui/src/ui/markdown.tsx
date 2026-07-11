@@ -1,15 +1,7 @@
 import type { ComponentChildren } from 'preact';
 
-/**
- * Markdown mínimo para as respostas da IA — sem dependências e sem innerHTML
- * (tudo vira vnode, imune a XSS). Cobre o que aparece em resposta de dev:
- * código cercado com highlight, inline code, negrito/itálico, listas,
- * headings, links e cores hex com swatch.
- */
-
-// ---------------------------------------------------------------------------
-// Highlight de código (tokenizer único, keywords por linguagem)
-// ---------------------------------------------------------------------------
+// Minimal markdown renderer: everything becomes a vnode, never innerHTML
+// (XSS-safe).
 
 const TS_KEYWORDS = new Set(
   ('const let var function return if else for while switch case break continue new class extends implements ' +
@@ -23,7 +15,7 @@ const BASH_KEYWORDS = new Set('if then else fi for do done while case esac funct
 function keywordsFor(lang: string): Set<string> {
   if (['css', 'scss', 'less'].includes(lang)) return CSS_KEYWORDS;
   if (['bash', 'sh', 'shell', 'zsh'].includes(lang)) return BASH_KEYWORDS;
-  return TS_KEYWORDS; // ts/tsx/js/jsx/json e default
+  return TS_KEYWORDS; // ts/tsx/js/jsx/json and default
 }
 
 const CODE_TOKEN = new RegExp(
@@ -74,10 +66,6 @@ export function highlightCode(code: string, lang: string): ComponentChildren[] {
   return out;
 }
 
-// ---------------------------------------------------------------------------
-// Inline: `code`, **negrito**, *itálico*, [link](url), #hex
-// ---------------------------------------------------------------------------
-
 const INLINE_TOKEN = new RegExp(
   [
     String.raw`(?<code>\x60[^\x60\n]+\x60)`,
@@ -117,10 +105,6 @@ export function renderInline(text: string): ComponentChildren[] {
   return out;
 }
 
-// ---------------------------------------------------------------------------
-// Blocos: código cercado, listas, headings, parágrafos
-// ---------------------------------------------------------------------------
-
 type Block =
   | { kind: 'code'; lang: string; code: string; open: boolean }
   | { kind: 'list'; ordered: boolean; items: string[] }
@@ -147,7 +131,7 @@ export function parseBlocks(text: string): Block[] {
         code.push(lines[i]!);
         i += 1;
       }
-      // bloco ainda aberto = código chegando em streaming — renderiza igual
+      // still open = code arriving via streaming; render it the same way
       blocks.push({ kind: 'code', lang, code: code.join('\n'), open: !closed });
       continue;
     }

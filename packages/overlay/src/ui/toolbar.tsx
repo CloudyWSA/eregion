@@ -14,12 +14,12 @@ export function Toolbar({ state, connection, onToggle, onClear }: Props) {
       <button
         class={`eg-btn ${state.active ? 'eg-btn-on' : ''}`}
         onClick={onToggle}
-        title={state.active ? 'Sair do modo seleção (Esc)' : 'Selecionar componentes (Alt+S)'}
+        title={state.active ? 'Exit selection mode (Esc)' : 'Select components (Alt+S)'}
       >
         ⟡
       </button>
       {state.selected.length > 0 && (
-        <button class="eg-btn" onClick={onClear} title="Limpar seleção (Esc)">
+        <button class="eg-btn" onClick={onClear} title="Clear selection (Esc)">
           {state.selected.length}✕
         </button>
       )}

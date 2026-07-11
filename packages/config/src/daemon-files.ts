@@ -2,9 +2,9 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 /**
- * Arquivos de runtime do daemon dentro do repo do app (git-ignorados):
- *  - daemon.json: descoberta pelo plugin de build (porta + token desta máquina)
- *  - state.json: continuidade da sessão de IA entre restarts do daemon
+ * Daemon runtime files inside the app repo (git-ignored):
+ *  - daemon.json: discovered by the build plugin (this machine's port + token)
+ *  - state.json: AI session continuity across daemon restarts
  */
 export const DAEMON_DIR = '.eregion';
 export const DAEMON_FILE = 'daemon.json';
@@ -17,9 +17,9 @@ export interface DaemonInfo {
 }
 
 export interface DaemonState {
-  /** Legado (pool de 1 sessão) — lido como slot 0. */
+  /** Legacy (single-session pool) — read as slot 0. */
   sessionId?: string;
-  /** Uma sessão viva por slot do pool, na ordem dos slots. */
+  /** One live session per pool slot, in slot order. */
   sessionIds?: string[];
 }
 
@@ -40,7 +40,7 @@ export function removeDaemonInfo(repoRoot: string): void {
   try {
     rmSync(path.join(repoRoot, DAEMON_DIR, DAEMON_FILE));
   } catch {
-    // já não existe — nada a fazer
+    // already gone — nothing to do
   }
 }
 

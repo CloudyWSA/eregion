@@ -1,19 +1,19 @@
 import type { HttpActivity } from '@eregion/protocol';
 
-/** Uma request observada pelo patch de rede, para correlação com o backend. */
+/** A request observed by the network patch, for backend correlation. */
 export interface RequestRecord {
-  /** traceId W3C injetado (ausente quando a origem não estava na allowlist). */
+  /** Injected W3C traceId (absent when the origin was not in the allowlist). */
   traceId?: string;
   method: string;
   url: string;
   status: number;
   durationMs: number;
-  /** Date.now() no início da request. */
+  /** Date.now() at the start of the request. */
   startedAt: number;
 }
 
 export interface NetworkPatchOptions {
-  /** Origens (além da same-origin) que também recebem o header traceparent. */
+  /** Origins (besides same-origin) that also receive the traceparent header. */
   traceOrigins?: string[];
 }
 
@@ -35,11 +35,11 @@ function randomHex(bytes: number): string {
 function makeTraceparent(): { traceId: string; header: string } {
   const traceId = randomHex(16);
   const spanId = randomHex(8);
-  // 00 = versão; 01 = sampled.
+  // 00 = version; 01 = sampled.
   return { traceId, header: `00-${traceId}-${spanId}-01` };
 }
 
-/** Injeta o header apenas em same-origin ou origem explicitamente permitida. */
+/** Injects the header only on same-origin or an explicitly allowed origin. */
 function shouldTrace(url: string, origins: string[]): boolean {
   try {
     const u = new URL(url, location.href);
@@ -71,9 +71,9 @@ interface XhrMeta {
 }
 
 /**
- * Patch idempotente de window.fetch e XMLHttpRequest: gera um traceId W3C por
- * request same-origin (ou allowlist), injeta o header `traceparent` e registra
- * a request num ring buffer. É o elo do frontend com o BackendTrace do daemon.
+ * Idempotent patch of window.fetch and XMLHttpRequest: generates a W3C traceId
+ * per same-origin (or allowlisted) request, injects the `traceparent` header,
+ * and records the request in a ring buffer. Links the frontend to the daemon's BackendTrace.
  */
 export function installNetworkPatch(options: NetworkPatchOptions = {}): void {
   if (patched || typeof window === 'undefined') return;
@@ -148,7 +148,7 @@ function patchXhr(origins: string[]): void {
         try {
           this.setRequestHeader('traceparent', tp.header);
         } catch {
-          // header não pôde ser setado (estado inválido) — segue sem trace
+          // header could not be set (invalid state); proceed without a trace
         }
       }
       m.startedAt = Date.now();
@@ -167,14 +167,14 @@ function patchXhr(origins: string[]): void {
   };
 }
 
-/** Requests do buffer, opcionalmente só as iniciadas nos últimos `sinceMs`. */
+/** Buffered requests, optionally only those started within the last `sinceMs`. */
 export function recentRequests(sinceMs?: number): RequestRecord[] {
   if (sinceMs == null) return [...buffer];
   const cutoff = Date.now() - sinceMs;
   return buffer.filter((r) => r.startedAt >= cutoff);
 }
 
-/** Últimas requests formatadas como HttpActivity para anexar ao payload. */
+/** Latest requests formatted as HttpActivity to attach to the payload. */
 export function recentHttpActivity(limit: number = HTTP_ACTIVITY_LIMIT): HttpActivity[] {
   return buffer.slice(-limit).map((r) => ({
     req: `${r.method} ${urlToShortPath(r.url)} → ${r.status} (${r.durationMs}ms)`,
@@ -182,7 +182,7 @@ export function recentHttpActivity(limit: number = HTTP_ACTIVITY_LIMIT): HttpAct
   }));
 }
 
-/** Somente para testes: zera o ring buffer. */
+/** Tests only: clears the ring buffer. */
 export function __resetNetworkBuffer(): void {
   buffer.length = 0;
 }

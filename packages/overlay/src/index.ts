@@ -1,10 +1,7 @@
-// @eregion/overlay — overlay de seleção injetado no app em dev (shadow DOM).
 export const PKG = '@eregion/overlay' as const;
 
-// Resumo de valores para o payload de seleção — compartilhado pelos adapters
-// (react lê props do fiber; angular lê inputs/signals). O comportamento (limite
-// de props, truncamento ≤60 chars, descarte de `children`) precisa ser idêntico
-// nos dois, então vive aqui em vez de duplicado em cada adapter.
+// Value summarization for the selection payload, shared by all adapters so the
+// budget behavior (prop cap, ≤60-char truncation, dropping `children`) stays identical.
 const MAX_PROPS = 10;
 const MAX_VALUE_CHARS = 60;
 
@@ -13,7 +10,7 @@ function functionName(fn: unknown): string {
   return f.displayName || f.name || f.render?.name || '';
 }
 
-/** Um único valor resumido como string curta e segura para tráfego. */
+/** Summarizes a single value as a short, transport-safe string. */
 export function summarizeValue(value: unknown): string {
   if (value === null) return 'null';
   switch (typeof value) {
@@ -37,7 +34,7 @@ export function summarizeValue(value: unknown): string {
   }
 }
 
-/** Props/state já resumidos como string — é isto que entra no payload (budget). */
+/** Props/state summarized as strings; this is what goes into the payload. */
 export function summarizeProps(
   props: Record<string, unknown> | null | undefined,
 ): Record<string, string> | undefined {

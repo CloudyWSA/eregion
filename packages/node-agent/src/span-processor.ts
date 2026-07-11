@@ -4,15 +4,15 @@ import type { ReadableSpan, Span, SpanProcessor } from '@opentelemetry/sdk-trace
 import type { BackendTrace, DbQuery } from '@eregion/protocol';
 import { firstAppFrame, sanitizeStatement } from './sanitize.js';
 
-/** Controla o que o agente extrai de cada trace. */
+/** Controls what the agent extracts from each trace. */
 export interface CaptureOptions {
-  /** Incluir db.statement sanitizado (default true). */
+  /** Include the sanitized db.statement (default true). */
   statements?: boolean;
-  /** Resolver call site (SourceRef) via stack (default true). */
+  /** Resolve the call site (SourceRef) via stack (default true). */
   stack?: boolean;
 }
 
-/** Destino do trace montado — abstraído para testar sem daemon. */
+/** Destination of the built trace — abstracted to test without a daemon. */
 export interface TraceSink {
   send(trace: BackendTrace): void;
 }
@@ -26,17 +26,17 @@ function isDbSpan(attrs: Attributes): boolean {
   return attrs['db.system'] != null;
 }
 
-/** "GET /api/orders" a partir dos atributos semconv do span de servidor. */
+/** "GET /api/orders" from the server span's semconv attributes. */
 function buildRoute(attrs: Attributes): string | undefined {
   const method = typeof attrs['http.method'] === 'string' ? (attrs['http.method'] as string) : '';
   const route = attrs['http.route'] ?? attrs['http.target'] ?? attrs['http.url'];
   let target = typeof route === 'string' ? route : '';
-  // http.url é absoluta — fica só com o pathname.
+  // http.url is absolute — keep only the pathname.
   if (target.includes('://')) {
     try {
       target = new URL(target).pathname;
     } catch {
-      // mantém como veio
+      // keep as-is
     }
   }
   const joined = `${method} ${target}`.trim();
@@ -44,13 +44,13 @@ function buildRoute(attrs: Attributes): string | undefined {
 }
 
 /**
- * SpanProcessor custom do Eregion:
- *  - em span de DB: no onStart captura o stack (call site vivo), no onEnd lê
- *    db.system/db.statement (sanitizado) e monta um DbQuery com SourceRef;
- *  - em span de request_handler (express): guarda o nome do handler;
- *  - no fim do span de servidor (raiz da request neste processo): monta o
- *    BackendTrace com traceId (do traceparent recebido), rota, handler,
- *    queries e duração, e envia ao sink.
+ * Eregion's custom SpanProcessor:
+ *  - DB span: onStart captures the stack (live call site), onEnd reads
+ *    db.system/db.statement (sanitized) and builds a DbQuery with SourceRef;
+ *  - request_handler span (express): stores the handler name;
+ *  - end of the server span (request root in this process): builds the
+ *    BackendTrace with traceId (from the received traceparent), route, handler,
+ *    queries and duration, and sends it to the sink.
  */
 export class EregionSpanProcessor implements SpanProcessor {
   private traces = new Map<string, TraceBuilder>();
@@ -64,7 +64,7 @@ export class EregionSpanProcessor implements SpanProcessor {
 
   onStart(span: Span): void {
     if (this.capture.stack !== false && isDbSpan(span.attributes)) {
-      // O stack no início do span de DB ainda contém os frames do app.
+      // At the start of the DB span the stack still holds the app frames.
       this.stacks.set(span.spanContext().spanId, new Error().stack);
     }
   }

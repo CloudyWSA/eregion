@@ -6,7 +6,7 @@ import { withEregion, type WebpackConfigLike, type WebpackContextLike, type Webp
 
 const LOADER = '@eregion/build/loader';
 
-/** Cria um repo fake (.git) com/sem .eregion/daemon.json e aponta cwd pra lá. */
+/** Creates a fake repo (.git) with/without .eregion/daemon.json and points cwd at it. */
 function fakeRepo(daemon?: { port: number; token: string }): string {
   const dir = mkdtempSync(path.join(os.tmpdir(), 'eregion-next-test-'));
   mkdirSync(path.join(dir, '.git'));
@@ -39,13 +39,13 @@ describe('withEregion', () => {
     vi.spyOn(process, 'cwd').mockReturnValue(dir);
   }
 
-  it('em produção devolve o nextConfig intocado', () => {
+  it('in production returns the nextConfig untouched', () => {
     process.env.NODE_ENV = 'production';
     const original = { reactStrictMode: true };
     expect(withEregion(original)).toBe(original);
   });
 
-  it('adiciona a rule de webpack preservando o webpack() do usuário', () => {
+  it('adds the webpack rule while preserving the user webpack()', () => {
     process.env.NODE_ENV = 'development';
     withCwd(fakeRepo());
 
@@ -71,7 +71,7 @@ describe('withEregion', () => {
     expect(eregionRule?.use).toEqual([{ loader: LOADER }]);
   });
 
-  it('expõe turbopack.rules para *.tsx e *.jsx preservando config existente', () => {
+  it('exposes turbopack.rules for *.tsx and *.jsx while preserving existing config', () => {
     process.env.NODE_ENV = 'development';
     withCwd(fakeRepo());
 
@@ -85,7 +85,7 @@ describe('withEregion', () => {
     expect(result.turbopack?.rules?.['*.jsx']).toEqual({ loaders: [LOADER] });
   });
 
-  it('injeta env com porta/token quando .eregion/daemon.json existe', () => {
+  it('injects env with port/token when .eregion/daemon.json exists', () => {
     process.env.NODE_ENV = 'development';
     withCwd(fakeRepo({ port: 4321, token: 'tok-abc' }));
 
@@ -98,7 +98,7 @@ describe('withEregion', () => {
     });
   });
 
-  it('sem daemon.json não injeta env de eregion', () => {
+  it('without daemon.json does not inject eregion env', () => {
     process.env.NODE_ENV = 'development';
     withCwd(fakeRepo());
 

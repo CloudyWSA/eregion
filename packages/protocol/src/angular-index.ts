@@ -2,18 +2,18 @@ import { z } from 'zod';
 import { SourceRef } from './selection-payload.js';
 
 /**
- * Índice estático de componentes Angular construído pelo daemon (parse dos
- * decorators com ts-morph — o build do app não é tocado). O overlay recebe o
- * índice compacto após o hello e resolve componentes em memória, síncrono.
+ * Static index of Angular components built by the daemon (decorators parsed
+ * with ts-morph — the app build is untouched). The overlay receives the compact
+ * index after hello and resolves components in memory, synchronously.
  *
- * Achado do spike em app Angular real: {className+selector} tem colisões — o índice
- * carrega o projeto de origem, e o adapter desambigua por ancestrais no DOM.
+ * Real-app finding: {className+selector} collides — the index carries the origin
+ * project, and the adapter disambiguates by DOM ancestors.
  */
 export const AngularComponentEntry = z.object({
   className: z.string(),
-  /** Selector CSS do componente; diretivas de atributo incluídas. */
+  /** Component CSS selector; attribute directives included. */
   selector: z.string().optional(),
-  /** Projeto do monorepo Angular (apps quase-duplicados existem). */
+  /** Origin project in the Angular monorepo (near-duplicate apps exist). */
   project: z.string().optional(),
   src: SourceRef,
   template: SourceRef.optional(),

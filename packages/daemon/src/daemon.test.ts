@@ -15,27 +15,27 @@ import { PermissionBroker } from './permission-broker.js';
 import { DaemonServer } from './server.js';
 import { TraceStore } from './trace-store.js';
 
-const selecao: SelectionPayload = {
+const selection: SelectionPayload = {
   v: PROTOCOL_VERSION,
-  app: { framework: 'react', name: 'app-teste', route: '/' },
+  app: { framework: 'react', name: 'test-app', route: '/' },
   selection: [
     {
       id: 's1',
       name: 'PrimaryButton',
       framework: 'react',
       tpl: { file: 'src/components/PrimaryButton.tsx', line: 9, column: 3 },
-      dom: { tag: 'button', rect: [0, 0, 100, 32], text: 'Salvar' },
+      dom: { tag: 'button', rect: [0, 0, 100, 32], text: 'Save' },
       http: [{ req: 'POST /api/save → 200 (80ms)' }],
     },
   ],
 };
 
 describe('InstrumentationCache', () => {
-  it('compactRefs resume a seleção em uma linha por componente', () => {
+  it('compactRefs summarizes the selection in one line per component', () => {
     const cache = new InstrumentationCache();
-    cache.setSelection(selecao);
+    cache.setSelection(selection);
     expect(cache.compactRefs()).toEqual([
-      '<selecionado s1: PrimaryButton — src/components/PrimaryButton.tsx:9, 1 request(s)>',
+      '<selected s1: PrimaryButton — src/components/PrimaryButton.tsx:9, 1 request(s)>',
     ]);
   });
 });
@@ -43,9 +43,9 @@ describe('InstrumentationCache', () => {
 describe('PermissionBroker', () => {
   const workspace = '/repo/app';
 
-  it('modo auto permite edição dentro do workspace sem perguntar', async () => {
+  it('auto mode allows edits inside the workspace without asking', async () => {
     const broker = new PermissionBroker([workspace], () => {
-      throw new Error('não deveria perguntar');
+      throw new Error('should not ask');
     });
     const result = await broker.canUseTool(
       'Edit',
@@ -55,7 +55,7 @@ describe('PermissionBroker', () => {
     expect(result?.behavior).toBe('allow');
   });
 
-  it('Bash sempre pergunta; respond(false) nega', async () => {
+  it('Bash always asks; respond(false) denies', async () => {
     const asked: string[] = [];
     const broker = new PermissionBroker([workspace], (req) => {
       asked.push(req.summary);
@@ -70,7 +70,7 @@ describe('PermissionBroker', () => {
     expect(result?.behavior).toBe('deny');
   });
 
-  it('modo review pergunta até para edição no workspace', async () => {
+  it('review mode asks even for a workspace edit', async () => {
     const broker = new PermissionBroker([workspace], (req) => broker.respond(req.requestId, true));
     broker.mode = 'review';
     const result = await broker.canUseTool(
@@ -83,7 +83,7 @@ describe('PermissionBroker', () => {
 });
 
 describe('DaemonServer', () => {
-  const TOKEN = 'token-de-teste';
+  const TOKEN = 'test-token';
   const sent: string[] = [];
   const cache = new InstrumentationCache();
   const poolStub = {
@@ -98,7 +98,7 @@ describe('DaemonServer', () => {
   const server = new DaemonServer({
     token: TOKEN,
     repoRoot: '/repo',
-    appVersion: 'teste',
+    appVersion: 'test',
     cache,
     broker,
     pool: poolStub,
@@ -107,7 +107,7 @@ describe('DaemonServer', () => {
   let port = 0;
 
   beforeAll(async () => {
-    // porta efêmera do range do daemon para não colidir com nada em uso
+    // ephemeral port from the daemon range to avoid colliding with anything in use
     port = 47190;
     await server.listen(port);
   });
@@ -133,32 +133,32 @@ describe('DaemonServer', () => {
     });
   }
 
-  it('token errado → hello.error e desconexão', async () => {
+  it('wrong token → hello.error and disconnect', async () => {
     const ws = await connect();
     const reply = nextMessage(ws);
-    sendMsg(ws, { type: 'hello', payload: { token: 'errado' } });
+    sendMsg(ws, { type: 'hello', payload: { token: 'wrong' } });
     expect(await reply).toMatchObject({ type: 'hello.error', payload: { code: 'bad_token' } });
     await once(ws, 'close');
   });
 
-  it('handshake válido → hello.ok; selection.update alimenta o cache; chat.send anexa refs', async () => {
+  it('valid handshake → hello.ok; selection.update feeds the cache; chat.send attaches refs', async () => {
     const ws = await connect();
     const hello = nextMessage(ws);
     sendMsg(ws, { type: 'hello', payload: { token: TOKEN } });
     expect(await hello).toMatchObject({ type: 'hello.ok', payload: { cwd: '/repo' } });
 
-    sendMsg(ws, { type: 'selection.update', payload: { payload: selecao } });
-    sendMsg(ws, { type: 'chat.send', payload: { text: 'deixa esse botão verde', attachSelection: true } });
+    sendMsg(ws, { type: 'selection.update', payload: { payload: selection } });
+    sendMsg(ws, { type: 'chat.send', payload: { text: 'make this button green', attachSelection: true } });
 
     await new Promise((r) => setTimeout(r, 100));
     expect(cache.getComponent('s1')?.name).toBe('PrimaryButton');
     expect(sent).toHaveLength(1);
-    expect(sent[0]).toContain('<selecionado s1: PrimaryButton');
-    expect(sent[0]).toContain('deixa esse botão verde');
+    expect(sent[0]).toContain('<selected s1: PrimaryButton');
+    expect(sent[0]).toContain('make this button green');
     ws.close();
   });
 
-  it('mensagem antes do hello → conexão fechada', async () => {
+  it('message before hello → connection closed', async () => {
     const ws = await connect();
     sendMsg(ws, { type: 'chat.cancel', payload: {} });
     await once(ws, 'close');

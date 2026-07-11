@@ -3,7 +3,7 @@ import { makeEnvelope, type DaemonMessage } from '@eregion/protocol';
 import { describe, expect, it } from 'vitest';
 import { EregionClient } from './ws-client.js';
 
-// jsdom não tem WebSocket — dublê mínimo controlável pelo teste
+// jsdom has no WebSocket; a minimal test-controllable stub
 class FakeSocket {
   static OPEN = 1;
   readyState = 1;
@@ -23,7 +23,7 @@ class FakeSocket {
 (globalThis as Record<string, unknown>).WebSocket = FakeSocket;
 
 describe('EregionClient', () => {
-  it('reprisa mensagens de estado para handlers registrados depois', () => {
+  it('replays state messages to handlers registered afterwards', () => {
     const socket = new FakeSocket();
     const client = new EregionClient({ port: 1, token: 't', createSocket: () => socket as unknown as WebSocket });
     client.connect();
@@ -33,20 +33,20 @@ describe('EregionClient', () => {
       payload: { sessionId: null, model: 'default', cwd: '/r', models: [{ id: 'sonnet', name: 'Sonnet' }] },
     });
 
-    // handler tardio (como o chat-ui após import dinâmico)
-    const recebidos: string[] = [];
-    client.onMessage((m) => recebidos.push(m.type));
-    expect(recebidos).toEqual(['hello.ok']);
+    // late handler (like the chat-ui after a dynamic import)
+    const received: string[] = [];
+    client.onMessage((m) => received.push(m.type));
+    expect(received).toEqual(['hello.ok']);
   });
 
-  it('eventos efêmeros (deltas) NÃO são reprisados', () => {
+  it('ephemeral events (deltas) are NOT replayed', () => {
     const socket = new FakeSocket();
     const client = new EregionClient({ port: 1, token: 't', createSocket: () => socket as unknown as WebSocket });
     client.connect();
     socket.onopen?.();
-    socket.receive({ type: 'chat.delta', payload: { text: 'oi' } });
-    const recebidos: string[] = [];
-    client.onMessage((m) => recebidos.push(m.type));
-    expect(recebidos).toEqual([]);
+    socket.receive({ type: 'chat.delta', payload: { text: 'hi' } });
+    const received: string[] = [];
+    client.onMessage((m) => received.push(m.type));
+    expect(received).toEqual([]);
   });
 });

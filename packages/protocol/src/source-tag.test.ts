@@ -7,13 +7,13 @@ describe('source-tag', () => {
     expect(parseTagValue(formatTagValue(ref))).toEqual(ref);
   });
 
-  it('parse rejeita valores malformados', () => {
-    for (const ruim of ['', 'a.tsx', 'a.tsx:1', 'a.tsx:0:1', 'a.tsx:1:0', 'a.tsx:x:y', ':1:2']) {
-      expect(parseTagValue(ruim)).toBeNull();
+  it('parse rejects malformed values', () => {
+    for (const bad of ['', 'a.tsx', 'a.tsx:1', 'a.tsx:0:1', 'a.tsx:1:0', 'a.tsx:x:y', ':1:2']) {
+      expect(parseTagValue(bad)).toBeNull();
     }
   });
 
-  it('aceita path com dois-pontos improváveis no meio', () => {
+  it('accepts a path with unlikely colons in the middle', () => {
     expect(parseTagValue('src/a:b.tsx:3:5')).toEqual({ file: 'src/a:b.tsx', line: 3, column: 5 });
   });
 });

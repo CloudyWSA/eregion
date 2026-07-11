@@ -1,10 +1,9 @@
 /**
- * Acesso mínimo aos internals do React em dev. Tudo aqui é best-effort: se o
- * React mudar os internals, o adapter degrada para o fallback DOM (tagging),
- * nunca quebra a seleção.
+ * Minimal access to React internals in dev. Best-effort: if React changes its
+ * internals, the adapter degrades to the DOM fallback (tagging) instead of
+ * breaking selection.
  */
 
-// O resumo de props vive em @eregion/overlay (compartilhado com o adapter Angular).
 export { summarizeProps, summarizeValue } from '@eregion/overlay';
 
 export interface FiberNode {
@@ -31,11 +30,11 @@ function isComponentType(type: unknown): type is { name?: string; displayName?: 
 export function componentNameOf(type: unknown): string | null {
   if (!isComponentType(type)) return null;
   const named = type as { displayName?: string; name?: string; render?: { name?: string } };
-  // forwardRef/memo guardam a função interna em .render/.type
+  // forwardRef/memo keep the inner function in .render/.type
   return named.displayName || named.name || named.render?.name || null;
 }
 
-/** Sobe do fiber host (tag DOM) até o fiber do componente que o renderizou. */
+/** Walks up from the host fiber (DOM tag) to the fiber of the component that rendered it. */
 export function getComponentFiber(fiber: FiberNode): FiberNode | null {
   let current = fiber.return;
   while (current) {

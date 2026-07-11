@@ -2,14 +2,14 @@ import { z } from 'zod';
 import { SourceRef } from './selection-payload.js';
 
 /**
- * Trace enviado pelo backend instrumentado (@eregion/node-agent) ao daemon
- * via HTTP POST /trace/ingest. Correlacionado com o frontend pelo traceId
- * que o overlay injeta no header traceparent/x-eg-trace.
+ * Trace sent by the instrumented backend (@eregion/node-agent) to the daemon
+ * via HTTP POST /trace/ingest. Correlated with the frontend by the traceId the
+ * overlay injects into the traceparent/x-eg-trace header.
  */
 export const DbQuery = z.object({
-  /** Sistema: 'pg', 'mysql', 'mongodb', … (semconv db.system) */
+  /** System: 'pg', 'mysql', 'mongodb', … (semconv db.system) */
   db: z.string(),
-  /** Statement sanitizado (sem bind params por default) */
+  /** Sanitized statement (no bind params by default) */
   stmt: z.string(),
   src: SourceRef.optional(),
   ms: z.number().nonnegative().optional(),

@@ -7,8 +7,8 @@ import {
   recentRequests,
 } from './network-patch.js';
 
-// Configurável por teste; o patch chama o fetch capturado no install, que
-// delega para cá — assim conseguimos inspecionar o init recebido.
+// Configurable per test; the patch calls the fetch captured at install, which
+// delegates here, so we can inspect the received init.
 let lastInit: RequestInit | undefined;
 let respondStatus = 200;
 
@@ -19,7 +19,7 @@ beforeAll(() => {
     lastInit = init;
     return Promise.resolve(new Response('ok', { status: respondStatus }));
   }) as typeof fetch;
-  // Neutraliza o send real do jsdom (evita rede); mantém o open real p/ estado.
+  // Neutralize jsdom's real send (avoids network); keep the real open for state.
   XMLHttpRequest.prototype.send = function () {};
   installNetworkPatch({ traceOrigins: [ALLOWED] });
 });
@@ -36,7 +36,7 @@ function traceparentOf(init: RequestInit | undefined): string | null {
 }
 
 describe('installNetworkPatch (fetch)', () => {
-  it('injeta traceparent válido em same-origin e registra no buffer', async () => {
+  it('injects a valid traceparent on same-origin and records in the buffer', async () => {
     await window.fetch('/api/orders');
     const tp = traceparentOf(lastInit);
     expect(tp).toMatch(/^00-[0-9a-f]{32}-[0-9a-f]{16}-01$/);
@@ -47,12 +47,12 @@ describe('installNetworkPatch (fetch)', () => {
     expect(reqs[0].traceId).toHaveLength(32);
   });
 
-  it('injeta em origem da allowlist', async () => {
+  it('injects on an allowlisted origin', async () => {
     await window.fetch(`${ALLOWED}/data`);
     expect(traceparentOf(lastInit)).toMatch(/^00-[0-9a-f]{32}/);
   });
 
-  it('NÃO injeta em cross-origin fora da allowlist (mas registra a request)', async () => {
+  it('does NOT inject on cross-origin outside the allowlist (but records the request)', async () => {
     await window.fetch('http://other.example/x');
     expect(traceparentOf(lastInit)).toBeNull();
     const reqs = recentRequests();
@@ -60,13 +60,13 @@ describe('installNetworkPatch (fetch)', () => {
     expect(reqs[0].traceId).toBeUndefined();
   });
 
-  it('é idempotente: chamar de novo não re-patcha window.fetch', () => {
+  it('is idempotent: calling again does not re-patch window.fetch', () => {
     const before = window.fetch;
     installNetworkPatch();
     expect(window.fetch).toBe(before);
   });
 
-  it('ring buffer limita a 200 e recentHttpActivity formata as últimas', async () => {
+  it('ring buffer caps at 200 and recentHttpActivity formats the latest', async () => {
     for (let i = 0; i < 205; i++) await window.fetch(`/api/n/${i}`);
     expect(recentRequests()).toHaveLength(200);
 
@@ -78,7 +78,7 @@ describe('installNetworkPatch (fetch)', () => {
 });
 
 describe('installNetworkPatch (XMLHttpRequest)', () => {
-  it('injeta traceparent same-origin e registra no loadend', () => {
+  it('injects a same-origin traceparent and records on loadend', () => {
     const xhr = new XMLHttpRequest();
     const spy = vi.spyOn(xhr, 'setRequestHeader');
     xhr.open('POST', '/api/save');

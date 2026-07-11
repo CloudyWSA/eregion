@@ -4,7 +4,7 @@ import type { AgentRuntime, RuntimeEvents } from './agent-runtime.js';
 export interface PoolJob {
   jobId: string;
   text: string;
-  /** id de ModelOption; ausente = modelo default da conta. */
+  /** ModelOption id; absent = the account's default model. */
   model?: string;
 }
 
@@ -15,18 +15,18 @@ interface Slot {
 }
 
 export interface PoolOptions {
-  /** Máximo de sessões vivas em paralelo (cada uma paga o próprio prefixo de cache). */
+  /** Max live sessions in parallel (each pays for its own cache prefix). */
   size: number;
-  /** Fábrica de runtime por slot — o pool injeta os eventos já correlacionados por job. */
+  /** Per-slot runtime factory — the pool injects events already correlated by job. */
   makeRuntime(slotIndex: number, events: RuntimeEvents): AgentRuntime;
   emit(msg: DaemonMessage): void;
 }
 
 /**
- * Pool de sessões vivas: jobs vão para a primeira sessão ociosa (criada sob
- * demanda até `size`); com todas ocupadas, entram numa fila global FIFO.
- * Cada evento sai carimbado com o jobId do slot — é isso que permite a UI
- * mostrar dois jobs progredindo ao mesmo tempo sem misturar as respostas.
+ * Pool of live sessions: jobs go to the first idle session (created on demand
+ * up to `size`); with all busy, they enter a global FIFO queue. Each event is
+ * stamped with the slot's jobId — that is what lets the UI show two jobs
+ * progressing at once without mixing up the responses.
  */
 export class RuntimePool {
   private slots: Slot[] = [];
@@ -34,7 +34,7 @@ export class RuntimePool {
 
   constructor(private options: PoolOptions) {}
 
-  /** sessionId do slot 0 (informativo, para o hello.ok). */
+  /** slot 0 sessionId (informational, for hello.ok). */
   get primarySessionId(): string | null {
     return this.slots[0]?.runtime.sessionId ?? null;
   }
@@ -53,7 +53,7 @@ export class RuntimePool {
     else this.pending.push(job);
   }
 
-  /** Cancela um job específico (fila ou em execução) ou, sem jobId, tudo. */
+  /** Cancels a specific job (queued or running) or, without jobId, everything. */
   async cancel(jobId?: string): Promise<void> {
     if (jobId === undefined) {
       this.pending.length = 0;
@@ -70,8 +70,8 @@ export class RuntimePool {
   }
 
   /**
-   * O checkpoint pertence à sessão que fez a edição; sem registro de origem,
-   * tenta cada slot — rewind com id desconhecido falha sem efeito colateral.
+   * The checkpoint belongs to the session that made the edit; with no origin
+   * record, try each slot — rewind with an unknown id fails harmlessly.
    */
   async rewindFiles(checkpointId: string): Promise<void> {
     let lastError: Error | null = null;
@@ -83,7 +83,7 @@ export class RuntimePool {
         lastError = err instanceof Error ? err : new Error(String(err));
       }
     }
-    throw lastError ?? new Error('nenhuma sessão ativa para reverter');
+    throw lastError ?? new Error('no active session to revert');
   }
 
   async close(): Promise<void> {
@@ -104,7 +104,7 @@ export class RuntimePool {
     const jobId = () => slot.currentJob?.jobId;
     const emit = this.options.emit;
     const events: RuntimeEvents = {
-      onSessionInit: () => undefined, // persistência é responsabilidade do makeRuntime
+      onSessionInit: () => undefined, // persistence is makeRuntime's responsibility
       onDelta: (text) => emit({ type: 'chat.delta', payload: { text, jobId: jobId() } }),
       onToolUse: (name, label, status) => emit({ type: 'chat.tool', payload: { name, label, status, jobId: jobId() } }),
       onResult: (usage, durationMs) => {
@@ -121,17 +121,17 @@ export class RuntimePool {
       onStreamEnd: () => {
         if (!slot.currentJob) return;
         if (slot.runtime.pendingMessages > 0) {
-          // O job seguinte já estava aceito quando o stream morreu (maxTurns):
-          // religa a sessão via resume e o job continua de onde estava.
+          // The next job was already accepted when the stream died (maxTurns):
+          // resume the session and the job continues where it left off.
           slot.runtime.ensureStarted();
           return;
         }
-        // Job morreu no meio do turn, sem result — falha explícita, sem hang.
+        // Job died mid-turn with no result — fail explicitly, no hang.
         emit({
           type: 'error',
           payload: {
             code: 'stream_ended',
-            message: 'A sessão terminou antes de concluir o pedido.',
+            message: 'The session ended before finishing the request.',
             jobId: jobId(),
           },
         });

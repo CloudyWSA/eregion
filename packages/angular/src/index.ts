@@ -1,6 +1,6 @@
-// @eregion/angular — integração para apps Angular. Não depende de @angular/core:
-// o app chama `initEregion()` em main.ts (após bootstrap), e nós registramos o
-// adapter Angular, montamos overlay + chat e pedimos o índice ao daemon.
+// @eregion/angular — integration for Angular apps. Does not depend on
+// @angular/core: the app calls `initEregion()` in main.ts (after bootstrap), and
+// we register the Angular adapter, mount overlay + chat, and ask the daemon for the index.
 import { angularAdapter, loadAngularIndex } from '@eregion/adapter-angular';
 import { mountChat } from '@eregion/chat-ui';
 import { mount, registerAdapter, type MountOptions } from '@eregion/overlay';
@@ -8,9 +8,9 @@ import { mount, registerAdapter, type MountOptions } from '@eregion/overlay';
 export { angularAdapter, loadAngularIndex } from '@eregion/adapter-angular';
 
 /**
- * Só roda em dev: `ngDevMode` é definido pelo Angular (tree-shaken no build de
- * produção) e `window.ng` (API de debug) só existe em dev — sem eles não há o
- * que inspecionar. Guard duplo evita montar o overlay em produção.
+ * Dev only: `ngDevMode` is set by Angular (tree-shaken in production builds) and
+ * `window.ng` (debug API) only exists in dev — without them there's nothing to
+ * inspect. The double guard keeps the overlay from mounting in production.
  */
 function isDevEnvironment(): boolean {
   if (typeof window === 'undefined') return false;
@@ -19,17 +19,17 @@ function isDevEnvironment(): boolean {
 }
 
 /**
- * Ponto de entrada. Chame uma vez no main.ts, depois do bootstrapApplication:
+ * Entry point. Call once in main.ts, after bootstrapApplication:
  *
  *   import { initEregion } from '@eregion/angular';
  *   bootstrapApplication(AppComponent, appConfig).then(() => initEregion());
  *
- * É idempotente e no-op fora de dev.
+ * Idempotent and a no-op outside dev.
  */
 export async function initEregion(options: MountOptions = {}): Promise<void> {
   if (!isDevEnvironment()) return;
 
-  // Prioridade > fallback DOM: o adapter Angular resolve primeiro (window.ng).
+  // Priority > DOM fallback: the Angular adapter resolves first (window.ng).
   registerAdapter(angularAdapter);
 
   const overlay = mount(options);
@@ -39,7 +39,7 @@ export async function initEregion(options: MountOptions = {}): Promise<void> {
   const client = overlay.client;
   if (!client) return;
 
-  // Índice estático vem do daemon (parse dos decorators) — carrega em memória.
+  // Static index comes from the daemon (decorator parsing) — load into memory.
   client.onMessage((msg) => {
     if (msg.type === 'angular.index') loadAngularIndex(msg.payload.index);
   });

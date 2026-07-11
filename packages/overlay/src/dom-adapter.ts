@@ -8,9 +8,9 @@ function componentNameFrom(file: string): string {
 }
 
 /**
- * Adapter mínimo baseado só no atributo injetado em build (TAG_ATTR).
- * Funciona em qualquer app tagueado, sem internals de framework; o
- * adapter-react enriquece por cima (nome real do componente, props, árvore).
+ * Minimal adapter based only on the build-injected attribute (TAG_ATTR).
+ * Works on any tagged app without framework internals; the react adapter
+ * enriches on top (real component name, props, tree).
  */
 export const domAdapter: FrameworkAdapter = {
   name: 'dom',
@@ -20,7 +20,7 @@ export const domAdapter: FrameworkAdapter = {
   instancesOf(hit: ComponentHit): Element[] {
     const value = hit.element.getAttribute(TAG_ATTR);
     if (!value) return [];
-    // o valor é nosso (path:linha:coluna) — basta escapar aspas/backslash p/ o seletor
+    // value is ours (path:line:column); escape quotes/backslash for the selector
     const escaped = value.split('\\').join('\\\\').split('"').join('\\"');
     return Array.from(document.querySelectorAll(`[${TAG_ATTR}="${escaped}"]`));
   },

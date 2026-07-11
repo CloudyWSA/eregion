@@ -1,10 +1,10 @@
 import type { SourceRef } from './selection-payload.js';
 
 /**
- * Atributo injetado em build-time nos elementos host (JSX/templates) com a
- * origem no código: "<path relativo ao root do repo>:<linha>:<coluna>",
- * ambos 1-based. Este é o contrato entre @eregion/build (escreve) e
- * @eregion/overlay (lê) — o formato só muda aqui.
+ * Attribute injected at build time on host elements (JSX/templates) with the
+ * code origin: "<path relative to repo root>:<line>:<column>", both 1-based.
+ * This is the contract between @eregion/build (writes) and @eregion/overlay
+ * (reads) — the format changes only here.
  */
 export const TAG_ATTR = 'data-eg-src';
 

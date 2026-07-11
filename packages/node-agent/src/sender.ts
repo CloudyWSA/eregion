@@ -1,13 +1,13 @@
 import { readDaemonInfo } from '@eregion/config';
 import type { BackendTrace } from '@eregion/protocol';
 
-/** Traces retidos quando o daemon está offline; descarta os mais antigos. */
+/** Traces held while the daemon is offline; drops the oldest. */
 const MAX_BUFFER = 50;
 
 /**
- * Envia BackendTrace ao daemon via HTTP POST /trace/ingest (fetch nativo,
- * fire-and-forget). Se o daemon estiver offline, mantém um buffer limitado e
- * tenta reenviar no próximo send — nunca lança para o app instrumentado.
+ * Sends BackendTrace to the daemon via HTTP POST /trace/ingest (native fetch,
+ * fire-and-forget). When the daemon is offline, keeps a bounded buffer and
+ * retries on the next send — never throws to the instrumented app.
  */
 export class TraceSender {
   private buffer: BackendTrace[] = [];
@@ -20,10 +20,10 @@ export class TraceSender {
     void this.flush();
   }
 
-  /** Tenta drenar o buffer; falhas voltam para a fila (bounded). */
+  /** Tries to drain the buffer; failures go back to the queue (bounded). */
   async flush(): Promise<void> {
     const info = readDaemonInfo(this.repoRoot);
-    if (!info) return; // daemon não está rodando — mantém no buffer
+    if (!info) return; // daemon not running — keep in the buffer
     const pending = this.buffer;
     this.buffer = [];
     const url = `http://127.0.0.1:${info.port}/trace/ingest`;
@@ -35,7 +35,7 @@ export class TraceSender {
           body: JSON.stringify(trace),
         });
       } catch {
-        // offline no meio do flush — devolve o restante e para
+        // offline mid-flush — put it back and stop
         this.buffer.push(trace);
       }
     }

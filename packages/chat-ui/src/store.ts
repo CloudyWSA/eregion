@@ -1,36 +1,31 @@
 import type { ChatUsage, DaemonMessage, ModelOption } from '@eregion/protocol';
 
-/**
- * Modelo central da UI: cada prompt disparado sobre uma seleção vira um JOB.
- * O daemon roda um pool de sessões — jobs progridem em paralelo até o limite
- * do pool, e os eventos chegam carimbados com o jobId de origem.
- */
 export type JobStatus = 'queued' | 'running' | 'done' | 'failed';
 
 export interface JobEvent {
   kind: 'tool' | 'edit' | 'error';
   label: string;
   detail?: string;
-  /** Para edits: id de checkpoint para reverter. */
+  /** For edits: checkpoint id used to revert. */
   checkpointId?: string;
   status?: 'running' | 'done' | 'error';
 }
 
 export interface Job {
   id: number;
-  /** Correlaciona com os eventos do daemon (pool de sessões paralelas). */
+  /** Correlates with daemon events (parallel session pool). */
   jobId: string;
-  /** Época de disparo — alimenta o timer vivo do card. */
+  /** Dispatch epoch — feeds the card's live timer. */
   startedAt: number;
   prompt: string;
-  /** Nomes dos componentes selecionados no disparo (chips do job). */
+  /** Names of the components selected at dispatch (job chips). */
   targets: string[];
   status: JobStatus;
   answer: string;
   events: JobEvent[];
   usage?: ChatUsage;
   durationMs?: number;
-  /** id/nome do modelo escolhido no disparo (ausente = default da conta). */
+  /** id/name of the model chosen at dispatch (absent = account default). */
   model?: string;
   modelName?: string;
 }
@@ -46,11 +41,11 @@ export interface UiState {
   jobs: Job[];
   permission: PendingPermission | null;
   connected: boolean;
-  /** Modelos permitidos pela conta (descobertos pelo daemon em runtime). */
+  /** Models allowed by the account (discovered by the daemon at runtime). */
   models: ModelOption[];
-  /** Escolha corrente do dev; 'default' = modelo padrão da conta. */
+  /** Current dev choice; 'default' = account default model. */
   selectedModel: string;
-  /** Uso acumulado da sessão (medidor no drawer). */
+  /** Session-accumulated usage (drawer meter). */
   totals: { outputTokens: number; costUsd: number; jobs: number };
 }
 
@@ -83,10 +78,8 @@ export class JobStore {
     for (const fn of this.listeners) fn(this.state);
   }
 
-  /**
-   * Índice do job dono do evento: por jobId quando o daemon carimba (pool
-   * paralelo); sem jobId, FIFO — o aberto mais antigo (compat sessão única).
-   */
+  // Owning job for an event: by jobId when stamped (parallel pool); without
+  // jobId, FIFO oldest open job (single-session compat).
   private targetIndex(jobId?: string): number {
     if (jobId !== undefined) return this.state.jobs.findIndex((j) => j.jobId === jobId);
     return this.state.jobs.findIndex((j) => j.status === 'queued' || j.status === 'running');

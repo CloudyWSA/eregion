@@ -1,18 +1,14 @@
 'use client';
 
-// EregionDevtools — client component que monta o overlay de seleção e o
-// chat da Eregion em dev. O dev adiciona <EregionDevtools /> no root layout.
+// EregionDevtools — client component that mounts the selection overlay and the
+// Eregion chat in dev. The developer adds <EregionDevtools /> to the root layout.
 //
-// Diferente do Vite (onde `@eregion/build` injeta `window.__EREGION__` via
-// <script> no index.html), no Next quem publica essa config é este próprio
-// componente: `withEregion` lê `.eregion/daemon.json` no momento em que o
-// next.config carrega e expõe porta/token via `env` (NEXT_PUBLIC_EREGION_*);
-// este componente lê essas env vars no cliente e seta `window.__EREGION__`
-// antes de montar overlay e chat.
+// In Next, this component publishes `window.__EREGION__` itself: `withEregion`
+// reads `.eregion/daemon.json` when next.config loads and exposes port/token via
+// `env` (NEXT_PUBLIC_EREGION_*), which this component reads on the client.
 //
-// Limitação: as env vars são fixadas quando `next.config` carrega — se o
-// daemon (`eregion-dev`) subir DEPOIS do `next dev`, o app não vê a porta e
-// o token novos até que `next dev` seja reiniciado.
+// Limitation: env vars are fixed when next.config loads — if the daemon starts
+// AFTER `next dev`, the app won't see the new port/token until `next dev` restarts.
 import { useEffect } from 'react';
 
 interface EregionDaemonConfig {
@@ -21,9 +17,8 @@ interface EregionDaemonConfig {
   appName?: string;
 }
 
-// Cast local em vez de `declare global` — evita depender de carregar (mesmo
-// que só para tipos) o `declare global` de `@eregion/overlay`, já que aqui a
-// importação dela é sempre dinâmica.
+// Local cast instead of `declare global` — avoids loading `@eregion/overlay`'s
+// `declare global` (even just for types), since it is only imported dynamically here.
 type WindowWithEregion = typeof globalThis & { __EREGION__?: EregionDaemonConfig };
 
 function publishDaemonConfig(): void {

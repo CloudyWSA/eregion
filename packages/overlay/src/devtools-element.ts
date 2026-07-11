@@ -8,9 +8,9 @@ import { OverlayApp } from './ui/overlay-app.js';
 import { OVERLAY_CSS } from './ui/styles.js';
 
 export interface MountOptions {
-  /** Nome do app mostrado ao daemon; default: window.__EREGION__.appName. */
+  /** App name shown to the daemon; default: window.__EREGION__.appName. */
   appName?: string;
-  /** Conexão com o daemon; default: window.__EREGION__ (injetado pelo build). */
+  /** Daemon connection; default: window.__EREGION__ (injected by the build). */
   daemon?: Pick<EregionGlobal, 'daemonPort' | 'daemonToken'>;
 }
 
@@ -25,8 +25,8 @@ export class EregionDevtoolsElement extends HTMLElement {
   connectedCallback(): void {
     registerAdapter(domAdapter);
 
-    // Patch de rede: injeta traceparent nas requests do app e alimenta o buffer
-    // que o selection-engine anexa ao payload (rastro frontend → backend).
+    // Network patch: injects traceparent into the app's requests and feeds the
+    // buffer the selection-engine attaches to the payload (frontend → backend trace).
     installNetworkPatch();
     this.engine.httpProvider = () => recentHttpActivity();
 
@@ -42,7 +42,7 @@ export class EregionDevtoolsElement extends HTMLElement {
     shadow.appendChild(style);
     render(h(OverlayApp, { engine: this.engine, client: this.client }), shadow);
 
-    // Seleção alimenta o cache do daemon — nunca dispara a IA (contexto lazy).
+    // Selection feeds the daemon cache; it never triggers the AI (lazy context).
     this.unsubscribe = this.engine.subscribe((state) => {
       if (!this.client) return;
       this.client.send({

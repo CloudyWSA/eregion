@@ -12,11 +12,6 @@ interface Props {
   onDispatch(prompt: string): void;
 }
 
-/**
- * O prompt mora ao lado do componente: clicou, a caixa abre ali, escreve e
- * Enter — vira job no mesmo lugar. Shift+clique soma componentes; a caixa
- * segue o último clicado e mostra todos como chips.
- */
 export function PromptPopover({ selected, area, models, selectedModel, onModelChange, onDispatch }: Props) {
   const [prompt, setPrompt] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -42,7 +37,7 @@ export function PromptPopover({ selected, area, models, selectedModel, onModelCh
           <span class="eg-chips">
             {area && (
               <span class="eg-chip eg-chip-area">
-                ▧ área{area.container ? ` em ${area.container.name}` : ''}
+                ▧ area{area.container ? ` in ${area.container.name}` : ''}
               </span>
             )}
             {selected.map((s, i) => (
@@ -50,7 +45,7 @@ export function PromptPopover({ selected, area, models, selectedModel, onModelCh
             ))}
           </span>
           {models.length > 0 && (
-            <label class="eg-model" title="Modelo que executa este pedido">
+            <label class="eg-model" title="Model that runs this request">
               ◈ {models.find((m) => m.id === selectedModel)?.name ?? 'Default'} ▾
               <select
                 class="eg-model-select"
@@ -71,11 +66,11 @@ export function PromptPopover({ selected, area, models, selectedModel, onModelCh
           placeholder={
             area
               ? selected.length > 0
-                ? `O que fazer nesta área (${selected.length} componente(s) dentro)?`
-                : 'O que criar nesta área?'
+                ? `What to do in this area (${selected.length} component(s) inside)?`
+                : 'What should be created here?'
               : selected.length === 1
-                ? `O que mudar em ${selected[0]!.name}?`
-                : `O que mudar nestes ${selected.length}?`
+                ? `What to change in ${selected[0]!.name}?`
+                : `What to change in these ${selected.length}?`
           }
           onInput={(e) => setPrompt((e.target as HTMLInputElement).value)}
           onKeyDown={(e) => {
@@ -83,7 +78,7 @@ export function PromptPopover({ selected, area, models, selectedModel, onModelCh
             e.stopPropagation();
           }}
         />
-        <div class="eg-ask-hint">↵ enviar · shift+clique adiciona · esc cancela</div>
+        <div class="eg-ask-hint">↵ send · shift+click adds · esc to cancel</div>
       </div>
     </Anchored>
   );

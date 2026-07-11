@@ -7,15 +7,15 @@ function startDirOf(from: string): string {
   try {
     if (statSync(from).isDirectory()) return from;
   } catch {
-    // arquivo ainda não escrito em disco (ex: transform em memória) — usa o diretório dele
+    // file not yet written to disk (e.g. in-memory transform) — use its directory
   }
   return path.dirname(from);
 }
 
 /**
- * Root do repositório: primeiro diretório com .git subindo a partir de `from`
- * (arquivo ou diretório); fallback process.cwd(). Todos os paths do Eregion
- * (tagging, payload, daemon) são relativos a este root.
+ * Repository root: the first directory with a .git going up from `from` (file or
+ * directory); falls back to process.cwd(). All Eregion paths (tagging, payload,
+ * daemon) are relative to this root.
  */
 export function findRepoRoot(from: string): string {
   const dir = startDirOf(from);

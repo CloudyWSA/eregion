@@ -1,5 +1,4 @@
-// Entry de efeito colateral: monta o overlay se o build dev injetou a config.
-// É este módulo que o plugin de build importa no app em modo desenvolvimento.
+// Side-effect entry: mounts the overlay when the dev build injected the config.
 import { mount } from './devtools-element.js';
 
 if (typeof window !== 'undefined' && window.__EREGION__) {

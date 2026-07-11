@@ -13,23 +13,17 @@ type StatusHandler = (status: ConnectionStatus) => void;
 export interface ClientOptions {
   port: number;
   token: string;
-  /** Injetável para testes. */
+  /** Injectable for tests. */
   createSocket?: (url: string) => WebSocket;
 }
 
 const BACKOFF_MS = [500, 1000, 2000, 5000, 10000];
 
-/**
- * Mensagens de ESTADO (não eventos): quem se inscreve depois delas terem
- * chegado precisa recebê-las mesmo assim — o chat-ui carrega por import
- * dinâmico e costuma perder o hello.ok da conexão inicial.
- */
+// STATE messages (not events): late subscribers must still receive them, since
+// the chat-ui loads via dynamic import and often misses the initial hello.ok.
 const REPLAYABLE = new Set(['hello.ok', 'models.update', 'angular.index']);
 
-/**
- * Cliente WS do overlay. Enfileira enquanto desconectado, reconecta com
- * backoff e re-envia o hello a cada reconexão.
- */
+/** Overlay WS client. Queues while disconnected, reconnects with backoff, re-sends hello. */
 export class EregionClient {
   private ws: WebSocket | null = null;
   private queue: string[] = [];
@@ -55,7 +49,7 @@ export class EregionClient {
     ws.onopen = () => {
       this.attempts = 0;
       this.emitStatus('open');
-      // hello sempre primeiro; depois drena a fila
+      // hello always first, then drain the queue
       this.sendRaw(this.envelope({ type: 'hello', payload: { token: this.opts.token } }));
       const pending = this.queue.splice(0);
       for (const raw of pending) this.sendRaw(raw);

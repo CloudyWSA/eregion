@@ -4,10 +4,10 @@ import { Anchored, type AnchorTarget } from './anchored.js';
 import { Markdown } from './markdown.js';
 
 const STATUS_VERB: Record<JobStatus, string> = {
-  queued: 'na fila',
-  running: 'trabalhando',
-  done: 'pronto',
-  failed: 'falhou',
+  queued: 'queued',
+  running: 'working',
+  done: 'done',
+  failed: 'failed',
 };
 
 function useElapsed(job: Job): string {
@@ -40,10 +40,10 @@ function Step({ ev, onRevert }: { ev: JobEvent; onRevert(id: string): void }) {
       <div class="eg-step eg-step-edit">
         <span class="eg-node eg-node-edit" />
         <button class="eg-step-label eg-step-btn" onClick={() => setShowDiff(!showDiff)}>
-          editou <FileRef file={ev.label} />
+          edited <FileRef file={ev.label} />
         </button>
         {ev.checkpointId && (
-          <button class="eg-revert" onClick={() => onRevert(ev.checkpointId!)}>reverter</button>
+          <button class="eg-revert" onClick={() => onRevert(ev.checkpointId!)}>revert</button>
         )}
         {showDiff && ev.detail && <div class="eg-step-diff">{ev.detail}</div>}
       </div>
@@ -73,7 +73,6 @@ interface Props {
   onRevert(id: string): void;
 }
 
-/** O resultado mora onde o pedido nasceu: popover no componente, não sidebar. */
 export function JobPopover({ job, anchor, onClose, onRevert }: Props) {
   const elapsed = useElapsed(job);
   return (
@@ -85,7 +84,7 @@ export function JobPopover({ job, anchor, onClose, onRevert }: Props) {
           <span class="eg-job-meta">
             {job.modelName ? `${job.modelName} · ` : ''}{STATUS_VERB[job.status]} · {elapsed}
           </span>
-          <button class="eg-x" onClick={onClose} title="Fechar (o pedido continua)">✕</button>
+          <button class="eg-x" onClick={onClose} title="Close (the request keeps running)">✕</button>
         </header>
         {(job.events.length > 0 || job.answer) && (
           <div class="eg-job-body">

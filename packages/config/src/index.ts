@@ -1,4 +1,4 @@
-// @eregion/config — helpers de configuração compartilhados pelo tooling Node.
+// @eregion/config — configuration helpers shared across the Node tooling.
 export const PKG = '@eregion/config' as const;
 
 export { findRepoRoot } from './repo-root.js';

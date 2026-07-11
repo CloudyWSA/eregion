@@ -19,22 +19,22 @@ const trace: BackendTrace = {
 };
 
 describe('TraceStore', () => {
-  it('insert/get por traceId', () => {
+  it('insert/get by traceId', () => {
     const store = new TraceStore();
     store.insert(trace);
     expect(store.get(trace.traceId)?.route).toBe('GET /api/orders');
-    expect(store.get('inexistente')).toBeNull();
+    expect(store.get('nonexistent')).toBeNull();
   });
 
-  it('expira entradas além do TTL', () => {
-    const store = new TraceStore(-1); // TTL negativo → tudo já expirado
+  it('expires entries past the TTL', () => {
+    const store = new TraceStore(-1); // negative TTL → everything already expired
     store.insert(trace);
     expect(store.get(trace.traceId)).toBeNull();
   });
 });
 
 describe('resolveBackendTrace (get_backend_trace)', () => {
-  const selecao: SelectionPayload = {
+  const selection: SelectionPayload = {
     v: PROTOCOL_VERSION,
     app: { framework: 'react', name: 'app', route: '/' },
     selection: [
@@ -48,29 +48,29 @@ describe('resolveBackendTrace (get_backend_trace)', () => {
     ],
   };
 
-  it('resolve por traceId direto e formata legível', () => {
+  it('resolves by direct traceId and formats readably', () => {
     const store = new TraceStore();
     store.insert(trace);
     const out = resolveBackendTrace(new InstrumentationCache(), store, { traceId: trace.traceId });
-    expect(out).toContain('Rota: GET /api/orders');
+    expect(out).toContain('Route: GET /api/orders');
     expect(out).toContain('Handler: listOrders (src/orders/route.ts:8)');
     expect(out).toContain('[postgresql] SELECT * FROM orders WHERE id = ? @ src/orders/repo.ts:20 — 12ms');
   });
 
-  it('resolve o traceId a partir do componente selecionado', () => {
+  it('resolves the traceId from the selected component', () => {
     const store = new TraceStore();
     store.insert(trace);
     const cache = new InstrumentationCache();
-    cache.setSelection(selecao);
+    cache.setSelection(selection);
     const out = resolveBackendTrace(cache, store, { selectionId: 's1' });
-    expect(out).toContain('Rota: GET /api/orders');
+    expect(out).toContain('Route: GET /api/orders');
   });
 
-  it('mensagem clara quando não há trace para o id', () => {
+  it('clear message when there is no trace for the id', () => {
     const out = resolveBackendTrace(new InstrumentationCache(), new TraceStore(), {
       traceId: 'b'.repeat(32),
     });
-    expect(out).toContain('Nenhum trace de backend');
+    expect(out).toContain('No backend trace');
   });
 });
 
@@ -82,7 +82,7 @@ describe('POST /trace/ingest', () => {
   const server = new DaemonServer({
     token: 'tok',
     repoRoot: '/repo',
-    appVersion: 'teste',
+    appVersion: 'test',
     cache,
     broker,
     pool: poolStub,
@@ -107,21 +107,21 @@ describe('POST /trace/ingest', () => {
     return res.status;
   }
 
-  it('204 e armazena um BackendTrace válido', async () => {
+  it('204 and stores a valid BackendTrace', async () => {
     expect(await post(JSON.stringify(trace))).toBe(204);
     expect(store.get(trace.traceId)?.route).toBe('GET /api/orders');
   });
 
-  it('400 para JSON inválido', async () => {
-    expect(await post('{ nao json')).toBe(400);
+  it('400 for invalid JSON', async () => {
+    expect(await post('{ not json')).toBe(400);
   });
 
-  it('400 para body que não bate no schema BackendTrace', async () => {
+  it('400 for a body that does not match the BackendTrace schema', async () => {
     expect(await post(JSON.stringify({ foo: 1 }))).toBe(400);
   });
 
-  it('403 para Host não-loopback (proteção DNS rebinding)', async () => {
-    // fetch não deixa sobrescrever Host facilmente; usa socket cru.
+  it('403 for a non-loopback Host (DNS rebinding protection)', async () => {
+    // fetch won't let us override Host easily; use a raw socket.
     const { connect } = await import('node:net');
     const sock = connect(port, '127.0.0.1');
     await once(sock, 'connect');

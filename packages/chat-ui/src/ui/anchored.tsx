@@ -1,12 +1,8 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 
-/**
- * Popover ancorado a um elemento do app: nasce do notch que aponta o
- * componente e segue scroll/resize. Arrastar (área .eg-drag) desancora e
- * vira janela livre; o canto inferior direito redimensiona. Se o elemento
- * sair do DOM (hot-reload), congela no último rect conhecido.
- */
+// Popover anchored to an app element; freezes at the last known rect if the
+// element leaves the DOM (hot-reload).
 
 const GAP = 10;
 const DEFAULT_WIDTH = 400;
@@ -68,7 +64,7 @@ export type AnchorTarget = Element | { getBoundingClientRect(): DOMRect; isConne
 
 interface Props {
   anchor: AnchorTarget;
-  /** Altura estimada para decidir acima/abaixo (o conteúdo rola internamente). */
+  /** Estimated height to decide above/below (content scrolls internally). */
   estimatedHeight?: number;
   children: ComponentChildren;
 }
@@ -146,7 +142,7 @@ export function Anchored({ anchor, estimatedHeight = 160, children }: Props) {
     >
       <span class="eg-notch" />
       {children}
-      <span class="eg-resize" title="Redimensionar" />
+      <span class="eg-resize" title="Resize" />
     </div>
   );
 }

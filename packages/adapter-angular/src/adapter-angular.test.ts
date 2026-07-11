@@ -8,12 +8,12 @@ interface DirectiveMetadata {
   selector?: string;
 }
 
-// Mapa host DOM → instância do componente, do jeito que window.ng enxerga.
+// Host DOM → component instance map, the way window.ng sees it.
 const hostMap = new Map<Element, object>();
 
 function makeSignal<T>(value: T): () => T {
   const signal = () => value;
-  // Marca com o Symbol interno que o Angular usa (description === 'SIGNAL').
+  // Mark with the internal Symbol Angular uses (description === 'SIGNAL').
   (signal as unknown as Record<symbol, unknown>)[Symbol('SIGNAL')] = { value };
   return signal;
 }
@@ -37,8 +37,8 @@ function setupNg(): void {
   };
 }
 
-// Índice com colisão cross-project: FiltersModalComponent + app-filters-modal
-// existe em app-a e app-b; os pais (page-a / page-b) diferenciam o projeto.
+// Index with a cross-project collision: FiltersModalComponent + app-filters-modal
+// exists in app-a and app-b; the parents (page-a / page-b) tell the projects apart.
 const index: AngularIndex = {
   builtAtMs: 1,
   entries: [
@@ -71,18 +71,18 @@ afterEach(() => {
 });
 
 describe('angularAdapter', () => {
-  it('detect() é false sem window.ng', () => {
+  it('detect() is false without window.ng', () => {
     delete (window as unknown as { ng?: unknown }).ng;
     expect(angularAdapter.detect()).toBe(false);
   });
 
-  it('resolve enriquece com nome, inputs e signals', () => {
+  it('resolve enriches with name, inputs and signals', () => {
     document.body.innerHTML =
       '<app-page-a><app-filters-modal><button id="t">x</button></app-filters-modal></app-page-a>';
     const modal = document.querySelector('app-filters-modal')!;
 
     class FiltersModalComponent {
-      title = 'Filtros';
+      title = 'Filters';
       count = makeSignal(3);
       __meta: DirectiveMetadata = { selector: 'app-filters-modal', inputs: { title: 'title' } };
     }
@@ -91,11 +91,11 @@ describe('angularAdapter', () => {
     const hit = angularAdapter.resolve(document.getElementById('t')!)!;
     expect(hit).toMatchObject({ name: 'FiltersModalComponent', framework: 'angular' });
     expect(hit.element).toBe(modal);
-    expect(hit.props).toEqual({ title: "'Filtros'" });
+    expect(hit.props).toEqual({ title: "'Filters'" });
     expect(hit.state).toEqual({ count: '3' });
   });
 
-  it('colisão cross-project resolve pelo projeto com mais ancestrais casados', () => {
+  it('cross-project collision resolves to the project with the most matched ancestors', () => {
     document.body.innerHTML =
       '<app-page-a><app-filters-modal><span id="t">x</span></app-filters-modal></app-page-a>';
     const modal = document.querySelector('app-filters-modal')!;
@@ -106,17 +106,17 @@ describe('angularAdapter', () => {
     hostMap.set(modal, new FiltersModalComponent());
 
     const hit = angularAdapter.resolve(document.getElementById('t')!)!;
-    // app-page-a é ancestral → projeto app-a vence a colisão.
+    // app-page-a is an ancestor → project app-a wins the collision.
     expect(hit.src?.file).toBe('projects/app-a/src/filters.component.ts');
   });
 
-  it('sem window.ng, resolve retorna null', () => {
+  it('without window.ng, resolve returns null', () => {
     delete (window as unknown as { ng?: unknown }).ng;
     document.body.innerHTML = '<div id="d"></div>';
     expect(angularAdapter.resolve(document.getElementById('d')!)).toBeNull();
   });
 
-  it('componente fora do índice ainda resolve pelo nome, sem src', () => {
+  it('component outside the index still resolves by name, without src', () => {
     document.body.innerHTML = '<app-unknown><i id="t"></i></app-unknown>';
     const host = document.querySelector('app-unknown')!;
     class UnknownComponent {

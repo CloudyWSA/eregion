@@ -1,6 +1,6 @@
 import type { BackendTrace } from '@eregion/protocol';
 
-/** TTL padrão dos traces em memória: 10 minutos. */
+/** Default in-memory trace TTL: 10 minutes. */
 const DEFAULT_TTL_MS = 10 * 60 * 1000;
 
 interface Entry {
@@ -9,9 +9,9 @@ interface Entry {
 }
 
 /**
- * Guarda os BackendTrace recebidos do node-agent, indexados por traceId, com
- * TTL curto (o rastro só interessa enquanto a seleção correspondente está
- * viva). A limpeza roda no insert — sem timers, sem estado de fundo.
+ * Holds the BackendTraces received from node-agent, indexed by traceId, with
+ * a short TTL (a trace only matters while its selection is alive). Cleanup
+ * runs on insert — no timers, no background state.
  */
 export class TraceStore {
   private map = new Map<string, Entry>();

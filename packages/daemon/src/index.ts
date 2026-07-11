@@ -1,4 +1,4 @@
-// @eregion/daemon — daemon local: sessão viva do Claude Agent SDK + MCP tools.
+// @eregion/daemon — local daemon: live Claude Agent SDK session + MCP tools.
 export const PKG = '@eregion/daemon' as const;
 
 export { startDaemon, VERSION, type Daemon, type DaemonOptions } from './daemon.js';

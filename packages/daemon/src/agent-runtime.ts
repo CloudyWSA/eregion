@@ -23,23 +23,23 @@ export interface RuntimeEvents {
   onEditApplied(file: string, diff: string, checkpointId?: string): void;
   onStatus(state: 'idle' | 'thinking'): void;
   onError(code: string, message: string): void;
-  /** Stream da query terminou (maxTurns/crash) — distinto do idle por turn. */
+  /** The query stream ended (maxTurns/crash) — distinct from per-turn idle. */
   onStreamEnd?(): void;
 }
 
 const SYSTEM_APPEND = `
-Você é o Eregion, assistente de desenvolvimento embutido no app em execução.
-O desenvolvedor seleciona componentes na UI rodando e conversa com você para modificá-los.
+You are Eregion, the development assistant embedded in the running app.
+The developer selects components in the running UI and talks to you to modify them.
 
-Pedidos podem trazer uma ÁREA selecionada (retângulo na página): se houver container
-(insertion point), crie o novo conteúdo nesse arquivo; componentes listados dentro da
-área devem ser adaptados ao pedido.
+Requests may include a selected AREA (a rectangle on the page): if there is a container
+(insertion point), create the new content in that file; components listed inside the
+area should be adapted to the request.
 
-REGRA DE OURO: para qualquer pergunta sobre componentes selecionados, seus arquivos de origem,
-props, requests ou queries, use PRIMEIRO as tools mcp__eregion__* — a instrumentação já sabe a
-resposta. Só use Glob/Grep quando elas não cobrirem. Edite o código-fonte diretamente; o
-hot-reload do dev server mostra o resultado ao desenvolvedor imediatamente.
-Responda sempre em português.`;
+GOLDEN RULE: for any question about selected components, their source files, props,
+requests or queries, use the mcp__eregion__* tools FIRST — the instrumentation already
+knows the answer. Only use Glob/Grep when they don't cover it. Edit the source code
+directly; the dev server's hot-reload shows the result to the developer immediately.
+Reply in the developer's language.`;
 
 const MAX_TURNS_PER_CONNECTION = 40;
 
@@ -50,43 +50,38 @@ function basename(file: unknown): string {
   return file.slice(file.lastIndexOf('/') + 1);
 }
 
-/**
- * Label humano do passo mostrado na timeline do job — o dev vê "lendo
- * Header.tsx", nunca "mcp__eregion__get_component_source".
- */
 function toolLabel(name: string, input: Record<string, unknown>): string {
   switch (name) {
     case 'mcp__eregion__get_selection':
-      return 'lendo a seleção';
+      return 'reading selection';
     case 'mcp__eregion__get_component_source':
-      return 'lendo o código do componente';
+      return 'reading component code';
     case 'mcp__eregion__get_backend_trace':
-      return 'rastreando o backend';
+      return 'tracing the backend';
     case 'Read':
-      return `lendo ${basename(input.file_path) || 'arquivo'}`;
+      return `reading ${basename(input.file_path) || 'file'}`;
     case 'Glob':
     case 'Grep':
-      return 'buscando no código';
+      return 'searching the code';
     case 'Bash':
       return `terminal: ${String(input.command ?? '').slice(0, 40)}`;
     case 'Task':
-      return 'explorando com subagente';
+      return 'exploring with subagent';
     case 'ToolSearch':
-      return 'carregando ferramentas';
+      return 'loading tools';
     case 'TodoWrite':
-      return 'organizando passos';
+      return 'organizing steps';
     default:
       return name.startsWith('mcp__') ? name.slice(name.lastIndexOf('__') + 2) : name;
   }
 }
 
 /**
- * UMA sessão viva por projeto: o prompt é um AsyncIterable alimentado por
- * fila, mantendo o processo (e o prompt cache) quente entre mensagens.
- * Achados do spike aplicados: a 1ª mensagem é empurrada antes de consumir o
- * stream (o CLI só emite init depois dela — deadlock caso contrário);
- * strictMcpConfig evita herdar MCP servers pessoais do dev; usage/custo do
- * result são cumulativos por chamadas de API — reportamos deltas por turn.
+ * One live session per project, kept warm (process + prompt cache) between
+ * messages. The first message must be pushed before consuming the stream —
+ * the CLI only emits init after it, deadlocking otherwise. strictMcpConfig
+ * avoids inheriting the dev's personal MCP servers; result usage/cost is
+ * cumulative across API calls, so we report per-turn deltas.
  */
 export class AgentRuntime {
   private queryHandle: Query | null = null;
@@ -95,7 +90,7 @@ export class AgentRuntime {
   private lastCostUsd = 0;
   private currentModel: string | undefined;
   private lastUserMessageUuid: string | undefined;
-  /** tool_use em voo: id → {name, label}, para marcar 'done' no tool_result. */
+  /** In-flight tool_use: id → {name, label}, to mark 'done' on tool_result. */
   private inFlightTools = new Map<string, { name: string; label: string }>();
   sessionId: string | null = null;
 
@@ -110,12 +105,11 @@ export class AgentRuntime {
     return this.queryHandle !== null;
   }
 
-  /** Mensagens aceitas mas ainda não consumidas pelo stream. */
   get pendingMessages(): number {
     return this.inbox.length;
   }
 
-  /** Religa a sessão (resume) se o stream morreu com mensagens pendentes. */
+  /** Restarts the session (resume) if the stream died with pending messages. */
   ensureStarted(): void {
     if (!this.queryHandle && this.inbox.length > 0) this.start();
   }
@@ -129,11 +123,11 @@ export class AgentRuntime {
     });
     const wanted = model === 'default' ? undefined : model;
     if (!this.queryHandle) {
-      // Sessão nasce com a primeira mensagem já na fila — nunca antes.
+      // The session starts only with the first message already queued — never before.
       this.currentModel = wanted;
       this.start();
     } else if (wanted !== undefined && wanted !== this.currentModel) {
-      // Trocar modelo reprocessa o prefixo (cache frio) — escolha do dev.
+      // Changing model reprocesses the prefix (cold cache) — the dev's choice.
       this.currentModel = wanted;
       void this.queryHandle
         .setModel(wanted)
@@ -150,7 +144,7 @@ export class AgentRuntime {
   }
 
   async rewindFiles(userMessageId: string): Promise<void> {
-    if (!this.queryHandle) throw new Error('sessão ainda não iniciada');
+    if (!this.queryHandle) throw new Error('session not started yet');
     await this.queryHandle.rewindFiles(userMessageId);
   }
 
@@ -187,14 +181,14 @@ export class AgentRuntime {
         enableFileCheckpointing: true,
         maxTurns: MAX_TURNS_PER_CONNECTION,
         settingSources: ['project'],
-        // Varreduras mecânicas vão para um subagente haiku: o lixo
-        // intermediário fica fora do contexto principal e custa ~10x menos.
+        // Mechanical scans go to a haiku subagent: intermediate junk stays out
+        // of the main context and costs ~10x less.
         agents: {
           explorer: {
             description:
-              'Exploração barata de código: localizar arquivos, mapear usos de um componente/função, listar ocorrências. Use para varreduras amplas; NÃO edita nada.',
+              'Cheap code exploration: locate files, map uses of a component/function, list occurrences. Use for broad scans; edits NOTHING.',
             prompt:
-              'Você explora código a serviço do agente principal. Responda apenas com os fatos encontrados (paths, linhas, trechos curtos), sem opinião.',
+              'You explore code in service of the main agent. Reply only with the facts found (paths, lines, short snippets), no opinion.',
             tools: ['Read', 'Glob', 'Grep'],
             model: 'haiku',
           },
@@ -214,9 +208,9 @@ export class AgentRuntime {
     } catch (err) {
       this.events.onError('runtime_crash', err instanceof Error ? err.message : String(err));
     } finally {
-      // O stream também termina "normalmente" ao bater maxTurns; sem limpar o
-      // handle aqui, o próximo sendMessage alimentaria um generator órfão e o
-      // chat travaria em silêncio. Limpo → próximo envio reinicia com resume.
+      // The stream also ends "normally" on maxTurns; not clearing the handle
+      // here would feed the next sendMessage to an orphan generator and hang
+      // the chat silently. Cleared → next send restarts with resume.
       this.queryHandle = null;
       this.events.onStatus('idle');
       this.events.onStreamEnd?.();
@@ -232,7 +226,7 @@ export class AgentRuntime {
         }
         return;
       case 'stream_event': {
-        if (msg.parent_tool_use_id) return; // subagentes não vão para o chat
+        if (msg.parent_tool_use_id) return; // subagents don't go to the chat
         const ev = msg.event;
         if (ev.type === 'content_block_delta' && ev.delta.type === 'text_delta') {
           this.events.onDelta(ev.delta.text);
@@ -240,11 +234,11 @@ export class AgentRuntime {
         return;
       }
       case 'user': {
-        // eco da mensagem do dev — o uuid dela é o ponto de rewind das edições do turn
+        // echo of the dev's message — its uuid is the rewind point for the turn's edits
         if (!msg.parent_tool_use_id && !msg.isSynthetic && 'uuid' in msg) {
           this.lastUserMessageUuid = msg.uuid;
         }
-        // tool_results fecham os passos correspondentes na timeline do job
+        // tool_results close the corresponding steps in the job timeline
         const content = msg.message.content;
         if (Array.isArray(content)) {
           for (const block of content) {
@@ -265,7 +259,7 @@ export class AgentRuntime {
           if (block.type === 'tool_use') {
             const input = block.input as Record<string, unknown>;
             if (EDIT_TOOLS.has(block.name)) {
-              // edições viram card próprio (edit.applied) — sem passo duplicado
+              // edits become their own card (edit.applied) — no duplicate step
               this.trackEdit(block.name, input);
               continue;
             }
@@ -293,10 +287,10 @@ export class AgentRuntime {
     }
   }
 
-  /** Edit/Write auto-aprovados geram card de auditoria no chat. */
+  /** Auto-approved Edit/Write produce an audit card in the chat. */
   private trackEdit(toolName: string, input: Record<string, unknown>): void {
     if (toolName !== 'Edit' && toolName !== 'Write' && toolName !== 'MultiEdit') return;
-    const file = typeof input.file_path === 'string' ? input.file_path : '(desconhecido)';
+    const file = typeof input.file_path === 'string' ? input.file_path : '(unknown)';
     const oldStr = typeof input.old_string === 'string' ? input.old_string : '';
     const newStr =
       typeof input.new_string === 'string'

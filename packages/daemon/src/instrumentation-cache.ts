@@ -1,9 +1,9 @@
 import type { SelectedComponent, SelectionPayload } from '@eregion/protocol';
 
 /**
- * Estado de instrumentação alimentado pelo overlay via WS. As MCP tools
- * respondem daqui — a IA nunca espera o browser (a seleção já chegou antes
- * da pergunta) e o clique nunca dispara a IA (contexto lazy).
+ * Instrumentation state fed by the overlay over WS. The MCP tools answer from
+ * here — the AI never waits on the browser (the selection arrived before the
+ * question) and a click never triggers the AI (lazy context).
  */
 export class InstrumentationCache {
   private selection: SelectionPayload | null = null;
@@ -21,8 +21,8 @@ export class InstrumentationCache {
   }
 
   /**
-   * Referências compactas anexadas à mensagem do usuário quando ele envia com
-   * seleção ativa (~60–120 tokens por componente; o detalhe fica nas tools).
+   * Compact refs attached to the user's message when they send with an active
+   * selection (~60–120 tokens per component; the detail stays in the tools).
    */
   compactRefs(): string[] {
     if (!this.selection) return [];
@@ -39,7 +39,7 @@ export class InstrumentationCache {
       const ref = c.src ?? c.tpl;
       const where = ref ? ` — ${ref.file}:${ref.line}` : '';
       const http = c.http?.length ? `, ${c.http.length} request(s)` : '';
-      return `<selecionado ${c.id}: ${c.name}${where}${http}>`;
+      return `<selected ${c.id}: ${c.name}${where}${http}>`;
     }));
     return refs;
   }

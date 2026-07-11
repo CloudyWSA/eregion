@@ -1,4 +1,4 @@
-// @eregion/node-agent — agente OTel do backend: reporta traces ao daemon local.
+// @eregion/node-agent — backend OTel agent: reports traces to the local daemon.
 import { createRequire } from 'node:module';
 import {
   context,
@@ -26,28 +26,27 @@ export type { CaptureOptions, TraceSink } from './span-processor.js';
 const TRACER_NAME = '@eregion/node-agent';
 
 export interface InitOptions {
-  /** Filtros do que capturar por trace (statements/stack). */
+  /** Filters for what to capture per trace (statements/stack). */
   capture?: CaptureOptions;
-  /** Sobrescreve o repo root do backend (default: findRepoRoot(cwd)). */
+  /** Overrides the backend repo root (default: findRepoRoot(cwd)). */
   cwd?: string;
-  /** Sink alternativo (testes); default: POST ao daemon. */
+  /** Alternative sink (tests); default: POST to the daemon. */
   sink?: TraceSink;
 }
 
 let initialized = false;
 
 /**
- * Instrumenta o processo Node/Bun: registra W3C propagator + AsyncLocalStorage
- * context manager + instrumentations disponíveis + o SpanProcessor do Eregion.
- * No-op total em produção ou quando não há daemon (.eregion/daemon.json ausente)
- * — o agente nunca deve pesar em produção nem falhar se o daemon não subiu.
+ * Instruments the Node/Bun process: registers the W3C propagator, the
+ * AsyncLocalStorage context manager, available instrumentations and the Eregion
+ * SpanProcessor. No-op in production or when there is no daemon.
  */
 export function init(options: InitOptions = {}): boolean {
   if (initialized) return true;
   if (process.env.NODE_ENV === 'production') return false;
 
   const repoRoot = findRepoRoot(options.cwd ?? process.cwd());
-  // Sem daemon.json não há para onde mandar — evita instrumentar à toa.
+  // No daemon.json means nowhere to send — skip instrumenting.
   if (!options.sink && !readDaemonInfo(repoRoot)) return false;
 
   const sink: TraceSink = options.sink ?? new TraceSender(repoRoot);
@@ -69,9 +68,9 @@ export function init(options: InitOptions = {}): boolean {
 }
 
 /**
- * Instrumentations que dependem de módulos que podem não estar instalados no
- * backend do usuário (express/pg/mysql2/mongodb). Import dinâmico com try/catch
- * para não quebrar quem só usa http.
+ * Instrumentations that depend on modules which may not be installed in the
+ * user's backend (express/pg/mysql2/mongodb). Loaded via try/catch so that
+ * backends using only http don't break.
  */
 function loadOptionalInstrumentations(): Instrumentation[] {
   const require = createRequire(import.meta.url);
@@ -84,12 +83,11 @@ function loadOptionalInstrumentations(): Instrumentation[] {
   ];
   for (const [mod, cls] of optional) {
     try {
-      // require síncrono: as deps estão no node-agent; ausência → catch.
       const loaded = require(mod) as Record<string, new () => Instrumentation>;
       const Ctor = loaded[cls];
       if (Ctor) out.push(new Ctor());
     } catch {
-      // módulo indisponível no backend — ignora.
+      // module unavailable in the backend — ignore.
     }
   }
   return out;
@@ -101,11 +99,9 @@ const headerGetter: TextMapGetter<Headers> = {
 };
 
 /**
- * Wrapper para `Bun.serve` (que não tem instrumentation de http): abre um span
- * SERVER com o contexto do traceparent recebido, roda o handler dentro dele e
- * fecha — o SpanProcessor então monta e envia o BackendTrace.
- *
- *   Bun.serve({ fetch: withEregionTrace(async (req) => new Response('ok')) });
+ * Wrapper for `Bun.serve` (which has no http instrumentation): opens a SERVER
+ * span with the received traceparent context, runs the handler inside it and
+ * ends it — the SpanProcessor then builds and sends the BackendTrace.
  */
 export function withEregionTrace<A extends unknown[]>(
   handler: (req: Request, ...rest: A) => Response | Promise<Response>,

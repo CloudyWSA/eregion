@@ -15,7 +15,6 @@ interface Box {
 function labelFor(hit: ComponentHit, kinCount: number): string {
   const ref = hit.tpl ?? hit.src;
   const base = ref ? `${hit.name} — ${ref.file}:${ref.line}` : hit.name;
-  // ×N comunica o raio de impacto: editar o componente muda todas as instâncias
   return kinCount > 0 ? `${base} ×${kinCount + 1}` : base;
 }
 
@@ -32,7 +31,7 @@ function collectBoxes(state: EngineState): Box[] {
         state.area.height,
       ),
       kind: 'area',
-      label: state.area.container ? `dentro de ${state.area.container.name}` : 'área livre',
+      label: state.area.container ? `inside ${state.area.container.name}` : 'free area',
     });
   }
   boxes.push(...state.selected.map((hit): Box => ({
@@ -53,10 +52,7 @@ function collectBoxes(state: EngineState): Box[] {
   return boxes;
 }
 
-/**
- * Caixas de highlight posicionadas por getBoundingClientRect (coordenadas de
- * viewport, position: fixed). Re-lê os rects em scroll/resize.
- */
+/** Highlight boxes positioned via getBoundingClientRect (viewport coords, position: fixed); rects are re-read on scroll/resize. */
 export function HighlightLayer({ state }: Props) {
   const [boxes, setBoxes] = useState<Box[]>(() => collectBoxes(state));
 

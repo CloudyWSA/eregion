@@ -1,5 +1,5 @@
-// @eregion/build — tagging de source em JSX via unplugin (Vite/webpack/esbuild/rollup).
-// Para Next+Turbopack, use o loader standalone: '@eregion/build/loader' em turbopack.rules.
+// @eregion/build — JSX source tagging via unplugin (Vite/webpack/esbuild/rollup).
+// For Next+Turbopack, use the standalone loader: '@eregion/build/loader' in turbopack.rules.
 import { createUnplugin } from 'unplugin';
 import { findRepoRoot, readDaemonInfo } from '@eregion/config';
 import { shouldProcess, tagJsx, type TagOptions } from './transform.js';
@@ -10,14 +10,14 @@ export { findRepoRoot } from '@eregion/config';
 export { TAG_ATTR } from '@eregion/protocol';
 
 export interface BuildOptions extends TagOptions {
-  /** Nome do app mostrado no daemon/chat; default: sem nome. */
+  /** App name shown in the daemon/chat; default: no name. */
   appName?: string;
 }
 
 /**
- * Script injetado no index.html em dev: publica a config de conexão com o
- * daemon (porta + token de .eregion/daemon.json) para o overlay encontrar.
- * Sem daemon rodando não injeta nada — o app funciona normalmente.
+ * Script injected into index.html in dev: publishes the daemon connection
+ * config (port + token from .eregion/daemon.json) for the overlay to find.
+ * Injects nothing when no daemon is running — the app works normally.
  */
 function daemonConfigScript(appName?: string): string | null {
   const info = readDaemonInfo(findRepoRoot(process.cwd()));
@@ -36,12 +36,12 @@ export const EregionBuild = createUnplugin<BuildOptions | undefined>((options) =
     return tagJsx(code, id.split('?')[0]!, options ?? {});
   },
   vite: {
-    // Tagging expõe paths do repo — faz sentido apenas em dev.
+    // Tagging exposes repo paths — only makes sense in dev.
     apply: 'serve',
     config() {
       return {
-        // Os packages do SDK são workspace/dist e mudam fora do controle do
-        // dep-optimizer — pré-bundlados, o browser roda versões velhas.
+        // SDK packages are workspace/dist and change outside the dep-optimizer's
+        // control — if pre-bundled, the browser runs stale versions.
         optimizeDeps: {
           exclude: ['@eregion/overlay', '@eregion/chat-ui', '@eregion/adapter-react', '@eregion/adapter-angular'],
         },

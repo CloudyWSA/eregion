@@ -21,11 +21,11 @@ export interface ServerOptions {
   cache: InstrumentationCache;
   broker: PermissionBroker;
   pool: RuntimePool;
-  /** Índice Angular servido sob demanda (apps Angular apenas). */
+  /** Angular index served on demand (Angular apps only). */
   angularIndexer?: AngularIndexer;
-  /** Modelos permitidos pela conta do dev (descobertos em runtime). */
+  /** Models allowed by the dev's account (discovered at runtime). */
   getModels?: () => import('@eregion/protocol').ModelOption[];
-  /** Traces do backend (node-agent) recebidos via POST /trace/ingest. */
+  /** Backend traces (node-agent) received via POST /trace/ingest. */
   traceStore: TraceStore;
 }
 
@@ -33,7 +33,7 @@ const HELLO_DEADLINE_MS = 5_000;
 
 function originAllowed(req: IncomingMessage): boolean {
   const origin = req.headers.origin;
-  if (!origin) return true; // clientes não-browser (testes, CLI)
+  if (!origin) return true; // non-browser clients (tests, CLI)
   try {
     const { hostname } = new URL(origin);
     return hostname === 'localhost' || hostname === '127.0.0.1';
@@ -43,9 +43,9 @@ function originAllowed(req: IncomingMessage): boolean {
 }
 
 /**
- * Servidor do daemon: HTTP para descoberta (/.well-known/eregion) + WS para
- * overlay/chat. Bind exclusivo em 127.0.0.1; toda conexão precisa mandar
- * `hello` com o token (injetado no bundle dev) antes de qualquer outra coisa.
+ * Daemon server: HTTP for discovery (/.well-known/eregion) + WS for
+ * overlay/chat. Binds exclusively to 127.0.0.1; every connection must send
+ * `hello` with the token (injected into the dev bundle) before anything else.
  */
 export class DaemonServer {
   private http: Server;
@@ -55,7 +55,7 @@ export class DaemonServer {
 
   constructor(private options: ServerOptions) {
     this.http = createServer((req, res) => {
-      // Mesma regra de origem do WS — evita leitura via DNS rebinding.
+      // Same origin rule as the WS — prevents reads via DNS rebinding.
       const host = req.headers.host?.split(':')[0];
       if ((host !== '127.0.0.1' && host !== 'localhost') || !originAllowed(req)) {
         res.statusCode = 403;
@@ -67,7 +67,7 @@ export class DaemonServer {
         res.end(JSON.stringify({ root: options.repoRoot, version: options.appVersion }));
         return;
       }
-      // Ingestão de traces do backend instrumentado (node-agent).
+      // Ingest traces from the instrumented backend (node-agent).
       if (req.method === 'POST' && req.url === '/trace/ingest') {
         const chunks: Buffer[] = [];
         req.on('data', (chunk: Buffer) => chunks.push(chunk));
@@ -97,8 +97,8 @@ export class DaemonServer {
     });
     this.wss = new WebSocketServer({ server: this.http, path: '/ws' });
     this.wss.on('connection', (ws, req) => this.onConnection(ws, req));
-    // Sem handler, um EADDRINUSE re-emitido pelo wss derruba o processo antes
-    // do fallback de porta ter chance de tentar a próxima.
+    // Without a handler, an EADDRINUSE re-emitted by the wss crashes the
+    // process before the port fallback can try the next one.
     this.wss.on('error', () => undefined);
   }
 
@@ -119,7 +119,7 @@ export class DaemonServer {
     await new Promise<void>((resolve) => this.http.close(() => resolve()));
   }
 
-  /** Envia para todos os clientes autorizados (várias abas compartilham a sessão). */
+  /** Sends to all authorized clients (multiple tabs share the session). */
   broadcast(msg: DaemonMessage): void {
     const raw = JSON.stringify(makeEnvelope(`d${this.nextEnvelopeId++}`, msg));
     for (const ws of this.authorized) ws.send(raw);
@@ -127,7 +127,7 @@ export class DaemonServer {
 
   private onConnection(ws: WebSocket, req: IncomingMessage): void {
     if (!originAllowed(req)) {
-      this.send(ws, { type: 'hello.error', payload: { code: 'origin_denied', message: 'Origin não permitida.' } });
+      this.send(ws, { type: 'hello.error', payload: { code: 'origin_denied', message: 'Origin not allowed.' } });
       ws.close();
       return;
     }
@@ -140,7 +140,7 @@ export class DaemonServer {
       try {
         parsed = JSON.parse(String(data));
       } catch {
-        this.send(ws, { type: 'error', payload: { code: 'bad_message', message: 'frame não é JSON' } });
+        this.send(ws, { type: 'error', payload: { code: 'bad_message', message: 'frame is not JSON' } });
         return;
       }
       const res = parseClientMessage(parsed);
@@ -160,7 +160,7 @@ export class DaemonServer {
   private route(ws: WebSocket, msg: ClientMessage & { id: string }): void {
     if (msg.type === 'hello') {
       if (msg.payload.token !== this.options.token) {
-        this.send(ws, { type: 'hello.error', payload: { code: 'bad_token', message: 'Token inválido.' } });
+        this.send(ws, { type: 'hello.error', payload: { code: 'bad_token', message: 'Invalid token.' } });
         ws.close();
         return;
       }

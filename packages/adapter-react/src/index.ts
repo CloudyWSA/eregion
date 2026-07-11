@@ -1,5 +1,5 @@
-// @eregion/adapter-react — enriquece a resolução DOM (tagging) com os
-// internals do React em dev: nome real do componente e props resumidas.
+// @eregion/adapter-react — enriches DOM resolution (tagging) with React
+// internals in dev: real component name and summarized props.
 import { domAdapter, type ComponentHit, type FrameworkAdapter } from '@eregion/overlay';
 import { componentNameOf, getComponentFiber, getFiber, summarizeProps } from './fiber.js';
 
@@ -13,7 +13,7 @@ export const reactAdapter: FrameworkAdapter = {
     return typeof window !== 'undefined';
   },
   resolve(el: Element): ComponentHit | null {
-    // A base (elemento + arquivo:linha) vem do tagging de build — estável.
+    // Base (element + file:line) comes from build tagging — stable.
     const base = domAdapter.resolve(el);
     if (!base) return null;
 

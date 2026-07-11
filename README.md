@@ -1,21 +1,21 @@
 # eregion ⟡
 
-SDK open source para edição visual de componentes com IA: selecione componentes na aplicação **rodando**, descreva a mudança na barra de comando, e a IA edita o código-fonte real — o hot-reload fecha o ciclo. Um daemon local mantém **uma sessão viva** do Claude Agent SDK (autenticada pelo seu login do Claude Code) com ferramentas MCP de instrumentação, então cada pedido custa ~o tamanho da mensagem, não o contexto inteiro.
+Open-source SDK for AI-driven visual editing of components: select components in your **running** app, describe the change in the command bar, and the AI edits the real source — hot-reload closes the loop. A local daemon keeps **one live session** of the Claude Agent SDK (authenticated by your Claude Code login) with instrumentation MCP tools, so each request costs ~the size of the message, not the whole context.
 
-## Como usar
+## How to use
 
 ```
-Alt+S        entra no modo seleção (⟡ na taskbar)
-clique       seleciona um componente · Shift+clique adiciona à seleção
-digite ↵     a command bar aparece com a seleção — descreva a mudança e Enter
-Esc          limpa a seleção / sai do modo
+Alt+S        enter selection mode (⟡ in the taskbar)
+click        select a component · Shift+click adds to the selection
+type ↵       the command bar opens with the selection — describe the change and Enter
+Esc          clear the selection / exit the mode
 ```
 
-Cada pedido vira um **job** na activity rail (canto inferior direito). Clique num job para abrir o drawer com histórico, diffs (com "reverter"), custo por pedido e chat livre.
+Each request becomes a **job** in the activity rail (bottom-right corner). Click a job to open the drawer with history, diffs (with "revert"), per-request cost, and free-form chat.
 
-## Setup por app
+## Per-app setup
 
-Pré-requisito comum: daemon rodando na raiz do repo (`npx eregion-dev`) **antes** do dev server — ele grava `.eregion/daemon.json` (porta + token) que os plugins de build injetam no bundle dev. Adicione `.eregion/` ao `.gitignore` do app.
+Common prerequisite: the daemon running at the repo root (`npx eregion-dev`) **before** the dev server — it writes `.eregion/daemon.json` (port + token) that the build plugins inject into the dev bundle. Add `.eregion/` to the app's `.gitignore`.
 
 ### Vite + React
 
@@ -23,8 +23,8 @@ Pré-requisito comum: daemon rodando na raiz do repo (`npx eregion-dev`) **antes
 // vite.config.ts
 import { viteEregion } from '@eregion/build';
 export default defineConfig({
-  plugins: [viteEregion({ appName: 'meu-app' }), react()],
-  // WSL em /mnt/c: watch: { usePolling: true }
+  plugins: [viteEregion({ appName: 'my-app' }), react()],
+  // WSL on /mnt/c: watch: { usePolling: true }
 });
 
 // main.tsx (dev only)
@@ -37,7 +37,7 @@ if (import.meta.env.DEV) {
 }
 ```
 
-### Next.js (App Router, webpack ou Turbopack)
+### Next.js (App Router, webpack or Turbopack)
 
 ```ts
 // next.config.ts
@@ -46,9 +46,9 @@ export default withEregion(nextConfig);
 
 // app/layout.tsx
 import { EregionDevtools } from '@eregion/next/devtools';
-// … <EregionDevtools /> dentro do <body>
+// … <EregionDevtools /> inside the <body>
 
-// instrumentation.ts (rastro de backend, opcional)
+// instrumentation.ts (backend trace, optional)
 import { registerEregionInstrumentation } from '@eregion/next/instrumentation';
 export function register() { return registerEregionInstrumentation(); }
 ```
@@ -56,64 +56,64 @@ export function register() { return registerEregionInstrumentation(); }
 ### Angular
 
 ```ts
-// main.ts — consulte packages/angular/README.md
+// main.ts — see packages/angular/README.md
 import { initEregion } from '@eregion/angular';
 if (typeof ngDevMode !== 'undefined' && ngDevMode) void initEregion();
 ```
 
-O daemon indexa os decorators `@Component` do repo (sem tocar no build do app) e serve o índice ao overlay.
+The daemon indexes the repo's `@Component` decorators (without touching the app build) and serves the index to the overlay.
 
-### Backend Node/Bun (rastro request → query)
+### Node/Bun backend (request → query trace)
 
 ```ts
-// no boot do backend, antes de tudo (dev only — vira no-op em produção)
+// at backend boot, before anything else (dev only — becomes a no-op in production)
 import { init } from '@eregion/node-agent';
 init();
 ```
 
-Com isso, "qual a query desse componente?" funciona: o overlay injeta `traceparent` nas requests, o backend reporta handler + SQL ao daemon, e a IA responde via `get_backend_trace` — sem explorar o repo.
+With this, "what's the query behind this component?" works: the overlay injects `traceparent` into requests, the backend reports handler + SQL to the daemon, and the AI answers via `get_backend_trace` — without exploring the repo.
 
-## Arquitetura
+## Architecture
 
 ```
-Browser (app em dev)                          Máquina do dev
+Browser (app in dev)                          Dev machine
 ┌────────────────────────────────┐   WS      ┌─────────────────────────────────┐
 │ @eregion/overlay + adapters    │◄─────────►│ @eregion/daemon                 │
-│ command bar + activity rail    │  token    │  sessão viva Claude Agent SDK   │
-│ network patch (traceparent)    │           │  MCP tools de instrumentação    │
-└──────────────┬─────────────────┘           │  indexer Angular · trace store  │
+│ command bar + activity rail    │  token    │  live Claude Agent SDK session  │
+│ network patch (traceparent)    │           │  instrumentation MCP tools      │
+└──────────────┬─────────────────┘           │  Angular indexer · trace store  │
                ▼                             └──────────────┬──────────────────┘
-Backend Node/Bun/Next                                       │ edita os repos
+Node/Bun/Next backend                                       │ edits the repos
 ┌────────────────────────────────┐  POST /trace/ingest      ▼
-│ @eregion/node-agent (OTel)     │────────────────► hot-reload fecha o ciclo
+│ @eregion/node-agent (OTel)     │────────────────► hot-reload closes the loop
 └────────────────────────────────┘
 ```
 
-Princípios: **contexto lazy** (selecionar não gasta token; a mensagem leva só refs compactas e a IA puxa detalhes via MCP tools), **resolução determinística** (tagging de build + índices; a IA não faz grep exploratório), **uma sessão viva** (prompt cache quente entre pedidos; jobs enfileiram em FIFO).
+Principles: **lazy context** (selecting spends no tokens; the message carries only compact refs and the AI pulls details via MCP tools), **deterministic resolution** (build tagging + indexes; the AI does no exploratory grep), **one live session** (warm prompt cache across requests; jobs queue FIFO).
 
 ## Packages
 
-| Package | Descrição |
+| Package | Description |
 | --- | --- |
-| `@eregion/protocol` | Contrato Zod: payload de seleção, mensagens WS, source-tag, traces |
-| `@eregion/overlay` | Seleção (engine + highlights), WS client, network patch, taskbar |
-| `@eregion/adapter-react` | Nome real e props via fiber (degrada para o tagging) |
-| `@eregion/adapter-angular` | Resolução via `ng.*` + índice do daemon |
-| `@eregion/build` | Tagging `data-eg-src` (unplugin + loader Turbopack) e injeção da config |
-| `@eregion/next` | `withEregion(config)`, `<EregionDevtools/>`, helper de instrumentation |
-| `@eregion/angular` | `initEregion()` dev-only |
-| `@eregion/node-agent` | OTel programático (Node/Bun) → traces para o daemon |
-| `@eregion/daemon` | CLI `eregion-dev`: sessão viva, MCP tools, permissões, indexer, traces |
-| `@eregion/chat-ui` | Command bar, activity rail, drawer e aprovações |
-| `@eregion/config` | `findRepoRoot`, arquivos `.eregion/*` |
+| `@eregion/protocol` | Zod contract: selection payload, WS messages, source-tag, traces |
+| `@eregion/overlay` | Selection (engine + highlights), WS client, network patch, taskbar |
+| `@eregion/adapter-react` | Real name and props via fiber (falls back to tagging) |
+| `@eregion/adapter-angular` | Resolution via `ng.*` + the daemon's index |
+| `@eregion/build` | `data-eg-src` tagging (unplugin + Turbopack loader) and config injection |
+| `@eregion/next` | `withEregion(config)`, `<EregionDevtools/>`, instrumentation helper |
+| `@eregion/angular` | `initEregion()`, dev-only |
+| `@eregion/node-agent` | Programmatic OTel (Node/Bun) → traces to the daemon |
+| `@eregion/daemon` | `eregion-dev` CLI: live session, MCP tools, permissions, indexer, traces |
+| `@eregion/chat-ui` | Command bar, activity rail, drawer, and approvals |
+| `@eregion/config` | `findRepoRoot`, `.eregion/*` files |
 
-## Desenvolvimento
+## Development
 
 ```bash
-pnpm install && pnpm build && pnpm -r test   # workspace completo
-cd examples/vite-react && pnpm dev           # app cobaia (daemon antes: node packages/daemon/dist/cli.js)
+pnpm install && pnpm build && pnpm -r test   # full workspace
+cd examples/vite-react && pnpm dev           # sample app (daemon first: node packages/daemon/dist/cli.js)
 ```
 
-## Licença
+## License
 
-MIT — veja [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE).

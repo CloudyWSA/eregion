@@ -13,7 +13,7 @@ const componentSrc = (selector: string) =>
 
 beforeAll(() => {
   root = mkdtempSync(join(tmpdir(), 'ng-idx-'));
-  // Monorepo Angular com dois projetos — reproduz a colisão cross-project real.
+  // Angular monorepo with two projects — reproduces the real cross-project collision.
   writeFileSync(
     join(root, 'angular.json'),
     JSON.stringify({
@@ -30,7 +30,7 @@ beforeAll(() => {
 
   writeFileSync(join(aDir, 'foo.component.ts'), componentSrc('app-foo'));
   writeFileSync(join(aDir, 'foo.component.html'), '<div>foo a</div>\n');
-  // Colisão: mesma className + selector em outro projeto.
+  // Collision: same className + selector in another project.
   writeFileSync(join(bDir, 'foo.component.ts'), componentSrc('app-foo'));
   writeFileSync(join(bDir, 'foo.component.html'), '<div>foo b</div>\n');
 
@@ -41,7 +41,7 @@ beforeAll(() => {
       `export class HighlightDirective {}\n`,
   );
 
-  // .spec.ts deve ser ignorado pelo scan.
+  // .spec.ts must be ignored by the scan.
   writeFileSync(
     join(aDir, 'foo.component.spec.ts'),
     `import { Component } from '@angular/core';\n` +
@@ -53,7 +53,7 @@ beforeAll(() => {
 afterAll(() => rmSync(root, { recursive: true, force: true }));
 
 describe('AngularIndexer', () => {
-  it('indexa @Component/@Directive, ignora .spec e carimba o projeto de origem', () => {
+  it('indexes @Component/@Directive, ignores .spec and stamps the origin project', () => {
     const index = new AngularIndexer(root).build();
 
     expect(index.entries).toHaveLength(3); // 2× FooComponent + HighlightDirective
@@ -77,7 +77,7 @@ describe('AngularIndexer', () => {
     expect(directive.template).toBeUndefined();
   });
 
-  it('getIndex devolve o mesmo índice em cache enquanto nada muda', () => {
+  it('getIndex returns the same cached index while nothing changes', () => {
     const indexer = new AngularIndexer(root);
     const first = indexer.getIndex();
     const second = indexer.getIndex();

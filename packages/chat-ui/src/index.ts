@@ -1,4 +1,3 @@
-// @eregion/chat-ui — prompt e resultado ancorados ao componente (popovers), tray e aprovações.
 export const PKG = '@eregion/chat-ui' as const;
 
 export { mountChat, CHAT_TAG } from './mount.js';

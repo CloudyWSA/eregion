@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// CLI do daemon: `npx eregion-dev` na raiz (ou subpasta) do repo do app.
+// Daemon CLI: `npx eregion-dev` at the root (or a subfolder) of the app repo.
 import { startDaemon, VERSION } from './daemon.js';
 
 function parallelFromArgs(argv: string[]): number | undefined {
@@ -12,11 +12,11 @@ async function main(): Promise<void> {
   console.log(`eregion-dev v${VERSION}`);
   const daemon = await startDaemon({ parallel: parallelFromArgs(process.argv) });
   console.log(`▸ repo: ${daemon.repoRoot}`);
-  console.log(`▸ ws:   ws://127.0.0.1:${daemon.port}/ws (token em .eregion/daemon.json)`);
-  console.log('▸ aguardando o overlay conectar… (Ctrl+C para sair)');
+  console.log(`▸ ws:   ws://127.0.0.1:${daemon.port}/ws (token in .eregion/daemon.json)`);
+  console.log('▸ waiting for the overlay to connect… (Ctrl+C to exit)');
 
   const shutdown = async () => {
-    console.log('\nencerrando…');
+    console.log('\nshutting down…');
     await daemon.stop();
     process.exit(0);
   };
@@ -25,6 +25,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((err) => {
-  console.error('falha ao iniciar o daemon:', err instanceof Error ? err.message : err);
+  console.error('failed to start the daemon:', err instanceof Error ? err.message : err);
   process.exit(1);
 });

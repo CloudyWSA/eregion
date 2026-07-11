@@ -1,7 +1,4 @@
-/**
- * CSS do overlay, isolado no shadow root. Mesma linguagem do chat-ui:
- * quase-preto neutro, texto prata, acento cobre único. Sem gradientes.
- */
+/** Overlay CSS, isolated in the shadow root. */
 export const OVERLAY_CSS = `
 :host { all: initial; }
 @media (prefers-reduced-motion: reduce) {

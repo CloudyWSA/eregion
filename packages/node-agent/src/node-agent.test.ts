@@ -7,7 +7,7 @@ import { EregionSpanProcessor, type TraceSink } from './span-processor.js';
 
 const REPO = '/repo/app';
 
-/** Span mínimo suficiente para o processor (só o que ele lê). */
+/** Minimal span sufficient for the processor (only what it reads). */
 function fakeSpan(opts: {
   traceId: string;
   spanId?: string;
@@ -30,12 +30,12 @@ function collector(): { sink: TraceSink; traces: BackendTrace[] } {
 }
 
 describe('sanitizeStatement', () => {
-  it('remove literais string e numéricos e colapsa espaço', () => {
+  it('removes string and numeric literals and collapses whitespace', () => {
     const stmt = "SELECT *  FROM   orders WHERE id = 42 AND name = 'Ana O''Brien'";
     expect(sanitizeStatement(stmt)).toBe('SELECT * FROM orders WHERE id = ? AND name = ?');
   });
 
-  it('trunca statements muito longos', () => {
+  it('truncates very long statements', () => {
     const long = `SELECT ${'a'.repeat(1000)}`;
     const out = sanitizeStatement(long);
     expect(out.length).toBeLessThanOrEqual(501);
@@ -44,7 +44,7 @@ describe('sanitizeStatement', () => {
 });
 
 describe('parseStackFrame / firstAppFrame', () => {
-  it('parseia frame com função e parênteses', () => {
+  it('parses a frame with a function and parentheses', () => {
     expect(parseStackFrame('    at Object.load (/repo/app/src/db.ts:12:7)')).toEqual({
       file: '/repo/app/src/db.ts',
       line: 12,
@@ -52,7 +52,7 @@ describe('parseStackFrame / firstAppFrame', () => {
     });
   });
 
-  it('parseia frame sem função (só localização)', () => {
+  it('parses a frame without a function (location only)', () => {
     expect(parseStackFrame('    at /repo/app/src/db.ts:3:1')).toEqual({
       file: '/repo/app/src/db.ts',
       line: 3,
@@ -60,7 +60,7 @@ describe('parseStackFrame / firstAppFrame', () => {
     });
   });
 
-  it('normaliza URLs file:// do ESM', () => {
+  it('normalizes ESM file:// URLs', () => {
     expect(parseStackFrame('    at fn (file:///repo/app/src/x.ts:5:9)')).toEqual({
       file: '/repo/app/src/x.ts',
       line: 5,
@@ -68,7 +68,7 @@ describe('parseStackFrame / firstAppFrame', () => {
     });
   });
 
-  it('firstAppFrame pula node_modules e retorna path relativo ao repo', () => {
+  it('firstAppFrame skips node_modules and returns a repo-relative path', () => {
     const stack = [
       'Error',
       '    at query (/repo/app/node_modules/pg/lib/client.js:1:1)',
@@ -82,14 +82,14 @@ describe('parseStackFrame / firstAppFrame', () => {
     });
   });
 
-  it('firstAppFrame retorna undefined quando tudo está fora do repo', () => {
+  it('firstAppFrame returns undefined when everything is outside the repo', () => {
     const stack = 'Error\n    at q (/other/place/x.js:1:1)';
     expect(firstAppFrame(stack, REPO)).toBeUndefined();
   });
 });
 
 describe('EregionSpanProcessor', () => {
-  it('monta BackendTrace no fim do span de servidor com queries e rota', () => {
+  it('builds a BackendTrace at the end of the server span with queries and route', () => {
     const { sink, traces } = collector();
     const proc = new EregionSpanProcessor(REPO, sink);
     const traceId = 'abc123';
@@ -130,7 +130,7 @@ describe('EregionSpanProcessor', () => {
     expect(traces[0].queries[0]).toMatchObject({ db: 'postgresql', stmt: 'SELECT * FROM orders WHERE id = ?', ms: 12 });
   });
 
-  it('deriva rota do pathname quando http.url é absoluta e sem http.route', () => {
+  it('derives the route from the pathname when http.url is absolute and http.route is missing', () => {
     const { sink, traces } = collector();
     const proc = new EregionSpanProcessor(REPO, sink);
     proc.onEnd(
@@ -143,7 +143,7 @@ describe('EregionSpanProcessor', () => {
     expect(traces[0].route).toBe('POST /api/save');
   });
 
-  it('capture.statements=false omite o statement', () => {
+  it('capture.statements=false omits the statement', () => {
     const { sink, traces } = collector();
     const proc = new EregionSpanProcessor(REPO, sink, { statements: false });
     const db = fakeSpan({

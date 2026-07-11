@@ -1,6 +1,5 @@
 import type { Job, PendingPermission } from '../store.js';
 
-/** Jobs em andamento cujo popover foi fechado — uma pill para reabrir. */
 export function JobTray({ jobs, onOpen }: { jobs: Job[]; onOpen(jobId: string): void }) {
   if (jobs.length === 0) return null;
   return (
@@ -26,13 +25,13 @@ export function ApprovalModal({ permission, onRespond }: ModalProps) {
     <div class="eg-scrim">
       <div class="eg-modal">
         <div class="eg-modal-title">
-          Permitir <b>{permission.toolName}</b>?
+          Allow <b>{permission.toolName}</b>?
         </div>
         <div class="eg-modal-cmd">{permission.summary}</div>
         {permission.diff && <div class="eg-modal-diff">{permission.diff}</div>}
         <div class="eg-modal-actions">
-          <button class="eg-act-deny" onClick={() => onRespond(permission.requestId, false)}>Negar</button>
-          <button class="eg-act-allow" onClick={() => onRespond(permission.requestId, true)}>Permitir</button>
+          <button class="eg-act-deny" onClick={() => onRespond(permission.requestId, false)}>Deny</button>
+          <button class="eg-act-allow" onClick={() => onRespond(permission.requestId, true)}>Allow</button>
         </div>
       </div>
     </div>

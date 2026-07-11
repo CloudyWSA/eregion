@@ -4,53 +4,53 @@ import { JobStore } from './store.js';
 const usage = { inputTokens: 10, outputTokens: 200, cacheReadTokens: 28000, costUsd: 0.02 };
 
 describe('JobStore', () => {
-  it('dispatch cria job running; deltas e result fecham o job', () => {
+  it('dispatch creates a running job; deltas and result close the job', () => {
     const store = new JobStore();
-    store.dispatch('deixa o botão verde', ['Header']);
-    store.handle({ type: 'chat.delta', payload: { text: 'Apli' } });
-    store.handle({ type: 'chat.delta', payload: { text: 'cado.' } });
+    store.dispatch('make the button green', ['Header']);
+    store.handle({ type: 'chat.delta', payload: { text: 'App' } });
+    store.handle({ type: 'chat.delta', payload: { text: 'lied.' } });
     store.handle({ type: 'chat.result', payload: { usage, durationMs: 3000 } });
 
     const [job] = store.getState().jobs;
-    expect(job).toMatchObject({ status: 'done', answer: 'Aplicado.', targets: ['Header'], usage });
+    expect(job).toMatchObject({ status: 'done', answer: 'Applied.', targets: ['Header'], usage });
     expect(store.getState().totals).toMatchObject({ jobs: 1, outputTokens: 200, costUsd: 0.02 });
   });
 
-  it('eventos intercalados de jobs PARALELOS não se misturam (atribuição por jobId)', () => {
+  it('interleaved events from PARALLEL jobs do not mix (assigned by jobId)', () => {
     const store = new JobStore();
-    const a = store.dispatch('deixa o Header azul', ['Header']);
-    const b = store.dispatch('padroniza os cards', ['OrderCard']);
+    const a = store.dispatch('make the Header blue', ['Header']);
+    const b = store.dispatch('standardize the cards', ['OrderCard']);
 
-    store.handle({ type: 'chat.delta', payload: { text: 'Editando o Header…', jobId: a.jobId } });
-    store.handle({ type: 'chat.delta', payload: { text: 'Ajustando os cards…', jobId: b.jobId } });
+    store.handle({ type: 'chat.delta', payload: { text: 'Editing the Header…', jobId: a.jobId } });
+    store.handle({ type: 'chat.delta', payload: { text: 'Adjusting the cards…', jobId: b.jobId } });
     store.handle({ type: 'edit.applied', payload: { file: 'src/OrderCard.tsx', diff: '+x', jobId: b.jobId } });
     store.handle({ type: 'chat.result', payload: { usage, durationMs: 900, jobId: b.jobId } });
-    store.handle({ type: 'chat.delta', payload: { text: ' pronto.', jobId: a.jobId } });
+    store.handle({ type: 'chat.delta', payload: { text: ' done.', jobId: a.jobId } });
     store.handle({ type: 'chat.result', payload: { usage, durationMs: 2000, jobId: a.jobId } });
 
     const [jobA, jobB] = store.getState().jobs;
-    expect(jobA).toMatchObject({ status: 'done', answer: 'Editando o Header… pronto.', events: [] });
-    expect(jobB).toMatchObject({ status: 'done', answer: 'Ajustando os cards…' });
+    expect(jobA).toMatchObject({ status: 'done', answer: 'Editing the Header… done.', events: [] });
+    expect(jobB).toMatchObject({ status: 'done', answer: 'Adjusting the cards…' });
     expect(jobB!.events).toMatchObject([{ kind: 'edit', label: 'src/OrderCard.tsx' }]);
     expect(store.getState().totals.jobs).toBe(2);
   });
 
-  it('jobs enfileiram em FIFO: eventos vão para o mais antigo aberto', () => {
+  it('jobs queue FIFO: events go to the oldest open one', () => {
     const store = new JobStore();
-    store.dispatch('primeiro', ['A']);
-    store.dispatch('segundo', ['B']);
+    store.dispatch('first', ['A']);
+    store.dispatch('second', ['B']);
     expect(store.getState().jobs.map((j) => j.status)).toEqual(['queued', 'queued']);
 
-    store.handle({ type: 'chat.delta', payload: { text: 'resposta do primeiro' } });
+    store.handle({ type: 'chat.delta', payload: { text: 'answer for the first' } });
     store.handle({ type: 'chat.result', payload: { usage, durationMs: 100 } });
-    store.handle({ type: 'chat.delta', payload: { text: 'resposta do segundo' } });
+    store.handle({ type: 'chat.delta', payload: { text: 'answer for the second' } });
 
     const [a, b] = store.getState().jobs;
-    expect(a).toMatchObject({ status: 'done', answer: 'resposta do primeiro' });
-    expect(b).toMatchObject({ status: 'running', answer: 'resposta do segundo' });
+    expect(a).toMatchObject({ status: 'done', answer: 'answer for the first' });
+    expect(b).toMatchObject({ status: 'running', answer: 'answer for the second' });
   });
 
-  it('tool running atualiza in-place no status final', () => {
+  it('running tool updates in-place to its final status', () => {
     const store = new JobStore();
     store.dispatch('x', ['A']);
     store.handle({ type: 'chat.tool', payload: { name: 't', label: 'get_selection', status: 'running' } });
@@ -58,11 +58,11 @@ describe('JobStore', () => {
     expect(store.getState().jobs[0]!.events).toEqual([{ kind: 'tool', label: 'get_selection', status: 'done' }]);
   });
 
-  it('edit.applied vira evento com checkpoint; erro marca o job como failed', () => {
+  it('edit.applied becomes an event with a checkpoint; error marks the job as failed', () => {
     const store = new JobStore();
     store.dispatch('x', ['A']);
     store.handle({ type: 'edit.applied', payload: { file: 'src/a.tsx', diff: '- a\n+ b', checkpointId: 'c1' } });
-    store.handle({ type: 'error', payload: { code: 'rate_limit', message: 'janela esgotada' } });
+    store.handle({ type: 'error', payload: { code: 'rate_limit', message: 'window exhausted' } });
     const job = store.getState().jobs[0]!;
     expect(job.status).toBe('failed');
     expect(job.events).toMatchObject([
@@ -71,7 +71,7 @@ describe('JobStore', () => {
     ]);
   });
 
-  it('modelos descobertos chegam por models.update e a escolha viaja no job', () => {
+  it('discovered models arrive via models.update and the choice travels on the job', () => {
     const store = new JobStore();
     store.handle({ type: 'models.update', payload: { models: [
       { id: 'default', name: 'Default (recommended)' },
@@ -79,16 +79,16 @@ describe('JobStore', () => {
     ] } });
     expect(store.getState().models).toHaveLength(2);
 
-    // default: job sem override de modelo
-    const semModelo = store.dispatch('x', ['A']);
-    expect(semModelo.model).toBeUndefined();
+    // default: job with no model override
+    const withoutModel = store.dispatch('x', ['A']);
+    expect(withoutModel.model).toBeUndefined();
 
     store.setSelectedModel('sonnet');
-    const comModelo = store.dispatch('y', ['B']);
-    expect(comModelo).toMatchObject({ model: 'sonnet', modelName: 'Sonnet' });
+    const withModel = store.dispatch('y', ['B']);
+    expect(withModel).toMatchObject({ model: 'sonnet', modelName: 'Sonnet' });
   });
 
-  it('permission.request expõe pendência e permissionResolved limpa', () => {
+  it('permission.request exposes the pending item and permissionResolved clears it', () => {
     const store = new JobStore();
     store.handle({ type: 'permission.request', payload: { requestId: 'p1', toolName: 'Bash', summary: 'git push' } });
     expect(store.getState().permission?.requestId).toBe('p1');

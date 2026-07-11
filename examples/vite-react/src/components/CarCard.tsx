@@ -1,10 +1,24 @@
-interface Carro {
+interface Car {
   id: string;
-  modelo: string;
-  preco: string;
+  model: string;
+  price: string;
+  year: string;
+  km: string;
+  transmission: string;
+  fuel: string;
+  color: string;
 }
 
-export function CarCard({ carro }: { carro: Carro }) {
+const labels: { field: keyof Car; label: string }[] = [
+  { field: 'year', label: 'Year' },
+  { field: 'km', label: 'KM' },
+  { field: 'transmission', label: 'Transmission' },
+  { field: 'fuel', label: 'Fuel' },
+  { field: 'color', label: 'Color' },
+  { field: 'id', label: 'Plate' },
+];
+
+export function CarCard({ car }: { car: Car }) {
   return (
     <article
       style={{
@@ -19,6 +33,10 @@ export function CarCard({ carro }: { carro: Carro }) {
     >
       <div
         style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 12,
           background: '#3b5998',
           color: '#fff',
           padding: '4px 8px',
@@ -26,32 +44,30 @@ export function CarCard({ carro }: { carro: Carro }) {
           fontWeight: 'bold',
         }}
       >
-        {carro.modelo}
+        <span>{car.model}</span>
+        <span>{car.price}</span>
       </div>
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 12,
-          background: '#f7f7f7',
-          padding: '8px',
-        }}
-      >
-        <span style={{ color: '#3b5998', fontWeight: 'bold', fontSize: 11 }}>{carro.id}</span>
-        <span
-          style={{
-            border: '1px solid #b3b3b3',
-            background: '#edeff4',
-            color: '#333',
-            padding: '2px 6px',
-            fontWeight: 'bold',
-            fontSize: 11,
-          }}
-        >
-          {carro.preco}
-        </span>
-      </div>
+      <table style={{ width: '100%', borderCollapse: 'collapse', background: '#f7f7f7' }}>
+        <tbody>
+          {labels.map(({ field, label }) => (
+            <tr key={field} style={{ borderTop: '1px solid #eee' }}>
+              <td
+                style={{
+                  padding: '4px 8px',
+                  color: '#666',
+                  fontWeight: 'bold',
+                  width: 90,
+                  verticalAlign: 'top',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {label}
+              </td>
+              <td style={{ padding: '4px 8px', color: '#333' }}>{car[field]}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </article>
   );
 }

@@ -1,14 +1,13 @@
-// @eregion/adapter-angular — resolve elementos do DOM para componentes Angular
-// usando a API de debug do framework em dev (window.ng) + o índice estático
-// construído pelo daemon (className/selector → arquivo:linha). O índice chega
-// de forma síncrona via loadAngularIndex; quem o pede ao daemon é o integrador
-// (@eregion/angular).
+// @eregion/adapter-angular — resolves DOM elements to Angular components using
+// the framework's dev debug API (window.ng) plus the static index built by the
+// daemon (className/selector → file:line). The index is loaded synchronously via
+// loadAngularIndex; the integrator (@eregion/angular) is what requests it.
 import { summarizeProps, type ComponentHit, type FrameworkAdapter } from '@eregion/overlay';
 import type { AngularComponentEntry, AngularIndex } from '@eregion/protocol';
 
 export const PKG = '@eregion/adapter-angular' as const;
 
-/** API de debug que o Angular expõe em `window.ng` apenas em modo dev. */
+/** Debug API that Angular exposes on `window.ng` only in dev mode. */
 interface DirectiveMetadata {
   inputs?: Record<string, string>;
   outputs?: Record<string, string>;
@@ -21,15 +20,15 @@ interface NgGlobal {
   getDirectiveMetadata?(instance: unknown): DirectiveMetadata | null;
 }
 
-// Índice em memória. Chaveado por `className|selector`; em colisão guardamos
-// todos os candidatos e desambiguamos no resolve pela árvore do DOM.
+// In-memory index. Keyed by `className|selector`; on collision we keep all
+// candidates and disambiguate at resolve time using the DOM tree.
 let byKey = new Map<string, AngularComponentEntry[]>();
 let byClassName = new Map<string, AngularComponentEntry[]>();
-// selectors de tag conhecidos por projeto — usado para desempatar colisões
-// cross-project contando ancestrais que casam com cada projeto.
+// Tag selectors known per project — used to break cross-project collisions by
+// counting ancestors that match each project.
 let projectSelectors = new Map<string, Set<string>>();
 
-/** Popula o índice em memória (chamado pelo integrador ao receber do daemon). */
+/** Populates the in-memory index (called by the integrator on daemon data). */
 export function loadAngularIndex(index: AngularIndex): void {
   const keyed = new Map<string, AngularComponentEntry[]>();
   const named = new Map<string, AngularComponentEntry[]>();
@@ -53,7 +52,7 @@ export function loadAngularIndex(index: AngularIndex): void {
   projectSelectors = projSel;
 }
 
-/** Visível para testes. */
+/** Exposed for tests. */
 export function clearAngularIndex(): void {
   byKey = new Map();
   byClassName = new Map();
@@ -77,9 +76,9 @@ export const angularAdapter: FrameworkAdapter = {
 
     const meta = ng.getDirectiveMetadata?.(instance) ?? null;
 
-    // Host: preferimos o que o Angular reporta; senão subimos pelo tag do selector.
+    // Host: prefer what Angular reports; otherwise climb via the selector tag.
     let host = ng.getHostElement?.(instance) ?? null;
-    // O selector do metadata pode não vir em toda versão — cai no tag do host.
+    // The metadata selector may be absent in some versions — fall back to the host tag.
     const metaSelector = meta && typeof meta.selector === 'string' ? meta.selector : undefined;
     const selector = metaSelector ?? (host ?? el).tagName.toLowerCase();
     if (!host) host = closestTag(el, selector) ?? el;
@@ -97,10 +96,10 @@ export const angularAdapter: FrameworkAdapter = {
   },
 };
 
-/** Escolhe a entry do índice para (className, selector), desambiguando colisões. */
+/** Picks the index entry for (className, selector), disambiguating collisions. */
 function lookup(className: string, selector: string, host: Element): AngularComponentEntry | undefined {
   let candidates = byKey.get(`${className}|${selector}`);
-  // O selector do runtime pode divergir do indexado — cai para só o className.
+  // The runtime selector may differ from the indexed one — fall back to className only.
   if (!candidates || candidates.length === 0) candidates = byClassName.get(className);
   if (!candidates || candidates.length === 0) return undefined;
   if (candidates.length === 1) return candidates[0];
@@ -108,11 +107,11 @@ function lookup(className: string, selector: string, host: Element): AngularComp
 }
 
 /**
- * Desambigua contando ancestrais do host cujo tagName casa com selectors de
- * cada projeto candidato: o app em execução preenche o DOM com seus próprios
- * componentes, então o projeto com mais ancestrais casados é o correto. Resolve
- * as colisões cross-project; colisões intra-projeto (cópias) empatam e caímos
- * no primeiro candidato — o daemon refina depois por matching de template.
+ * Disambiguates by counting host ancestors whose tagName matches each candidate
+ * project's selectors: the running app fills the DOM with its own components, so
+ * the project with the most matched ancestors is the right one. Resolves
+ * cross-project collisions; intra-project collisions (copies) tie and fall back
+ * to the first candidate — the daemon refines later via template matching.
  */
 function disambiguate(candidates: AngularComponentEntry[], host: Element): AngularComponentEntry {
   const chain: string[] = [];
@@ -136,7 +135,7 @@ function disambiguate(candidates: AngularComponentEntry[], host: Element): Angul
   return best;
 }
 
-/** Lê os inputs declarados (via metadata) do instance e resume os valores. */
+/** Reads the instance's declared inputs (via metadata) and summarizes the values. */
 function collectInputs(instance: unknown, meta: DirectiveMetadata | null): Record<string, string> | undefined {
   const inputs = meta?.inputs;
   if (!inputs) return undefined;
@@ -147,13 +146,13 @@ function collectInputs(instance: unknown, meta: DirectiveMetadata | null): Recor
       const raw = record[prop];
       values[prop] = isSignal(raw) ? raw() : raw;
     } catch {
-      // input com getter que lança — ignora, best-effort.
+      // input with a throwing getter — ignore, best-effort.
     }
   }
   return summarizeProps(values);
 }
 
-/** Detecta signals nas propriedades do instance e resume os valores atuais. */
+/** Detects signals in the instance's properties and summarizes current values. */
 function collectSignals(instance: unknown): Record<string, string> | undefined {
   const record = instance as Record<string, unknown>;
   const values: Record<string, unknown> = {};
@@ -163,7 +162,7 @@ function collectSignals(instance: unknown): Record<string, string> | undefined {
     try {
       values[key] = value();
     } catch {
-      // signal que lança ao ler — ignora.
+      // signal that throws when read — ignore.
     }
   }
   return summarizeProps(values);
@@ -190,9 +189,9 @@ function constructorName(instance: unknown): string | undefined {
 }
 
 /**
- * Um signal do Angular é uma função-getter marcada por um Symbol interno cuja
- * description é 'SIGNAL'; WritableSignal ainda expõe .set/.update. Detecção
- * best-effort — se falhar, o valor só não aparece no state.
+ * An Angular signal is a getter function marked by an internal Symbol whose
+ * description is 'SIGNAL'; WritableSignal also exposes .set/.update. Best-effort
+ * detection — if it fails, the value simply won't appear in state.
  */
 function isSignal(value: unknown): value is () => unknown {
   if (typeof value !== 'function') return false;
@@ -205,20 +204,20 @@ function isSignal(value: unknown): value is () => unknown {
   return false;
 }
 
-/** Sobe de `el` até o ancestral cujo tagName casa com um selector de tag. */
+/** Climbs from `el` to the ancestor whose tagName matches a tag selector. */
 function closestTag(el: Element, selector: string): Element | null {
   for (const tag of tagsOf(selector)) {
     try {
       const found = el.closest(tag);
       if (found) return found;
     } catch {
-      // selector inválido para closest — tenta o próximo.
+      // invalid selector for closest — try the next.
     }
   }
   return null;
 }
 
-/** Extrai os selectors de tag (ex: 'app-foo') de um selector CSS composto. */
+/** Extracts tag selectors (e.g. 'app-foo') from a composite CSS selector. */
 function tagsOf(selector: string): string[] {
   const out: string[] = [];
   for (const part of selector.split(',')) {
@@ -228,7 +227,7 @@ function tagsOf(selector: string): string[] {
   return out;
 }
 
-/** Só letras/dígitos/hífen → é seletor de elemento (não atributo/classe). */
+/** Letters/digits/hyphen only → it's an element selector (not attribute/class). */
 function isSimpleTag(s: string): boolean {
   for (let i = 0; i < s.length; i++) {
     const c = s.charCodeAt(i);

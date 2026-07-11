@@ -1,4 +1,4 @@
-// @eregion/protocol — contrato Zod entre overlay (browser), daemon e chat-ui.
+// @eregion/protocol — Zod contract between overlay (browser), daemon, and chat-ui.
 export const PKG = '@eregion/protocol' as const;
 
 export {

@@ -3,7 +3,7 @@ import { parseTagValue, PROTOCOL_VERSION, TAG_ATTR } from '@eregion/protocol';
 import { activeAdapters, type ComponentHit, type FrameworkAdapter } from './adapter.js';
 import { domAdapter } from './dom-adapter.js';
 
-/** Área desenhada com marquee, em coordenadas de PÁGINA (sobrevive a scroll). */
+/** Marquee-drawn area, in PAGE coordinates (survives scroll). */
 export interface AreaState {
   pageX: number;
   pageY: number;
@@ -15,15 +15,15 @@ export interface AreaState {
 export interface EngineState {
   active: boolean;
   hover: ComponentHit | null;
-  /** Demais instâncias do componente sob o cursor (mesma origem no código). */
+  /** Other instances of the component under the cursor (same code origin). */
   hoverKin: Element[];
   selected: ComponentHit[];
-  /** Retângulo em desenho (viewport), enquanto o botão está pressionado. */
+  /** Rectangle being drawn (viewport), while the button is held down. */
   marquee: DOMRect | null;
   area: AreaState | null;
 }
 
-/** Âncora sintética para popovers de área: rect de viewport seguindo o scroll. */
+/** Synthetic anchor for area popovers: a viewport rect that follows scroll. */
 export function areaAnchor(area: AreaState): { getBoundingClientRect(): DOMRect; isConnected: boolean } {
   return {
     isConnected: true,
@@ -44,7 +44,7 @@ function contains(outer: DOMRect, inner: DOMRect): boolean {
 
 type Listener = (state: EngineState) => void;
 
-/** Elementos da UI do Eregion (overlay e chat) nunca participam do hit-testing. */
+/** Eregion UI elements (overlay and chat) never take part in hit-testing. */
 const EREGION_TAGS = ['eregion-devtools', 'eregion-chat'];
 
 function isEregionUi(el: Element): boolean {
@@ -58,10 +58,7 @@ export class SelectionEngine {
   private listeners = new Set<Listener>();
   private doc: Document;
 
-  /**
-   * Fonte opcional de atividade HTTP recente (setada pelo devtools-element a
-   * partir do patch de rede). MVP: anexada ao primeiro componente selecionado.
-   */
+  /** Optional source of recent HTTP activity; attached to the first selected component. */
   httpProvider?: () => HttpActivity[];
 
   constructor(doc: Document = document) {
@@ -113,11 +110,7 @@ export class SelectionEngine {
     this.emit({ selected: [], hover: null, hoverKin: [], marquee: null, area: null });
   }
 
-  /**
-   * Resolve o elemento sob o ponto. Cursor sobre a UI do Eregion = nenhum
-   * hit — pular para o que está atrás roubaria cliques dos popovers (e
-   * selecionaria componentes escondidos sob eles).
-   */
+  /** Resolves the element under the point. Cursor over Eregion UI yields no hit. */
   hitTest(x: number, y: number): ComponentHit | null {
     const els = this.doc.elementsFromPoint(x, y);
     const top = els[0];
@@ -137,7 +130,7 @@ export class SelectionEngine {
     return null;
   }
 
-  /** Instâncias irmãs do hit (excluindo ele próprio). */
+  /** Sibling instances of the hit (excluding itself). */
   private kinOf(hit: ComponentHit, adapter: FrameworkAdapter): Element[] {
     const all = (adapter.instancesOf ?? domAdapter.instancesOf)?.call(adapter, hit) ?? [];
     return all.filter((el) => el !== hit.element);
@@ -182,13 +175,13 @@ export class SelectionEngine {
     const rect = this.marqueeRect(ev.clientX, ev.clientY);
     this.dragStart = null;
     this.dragging = false;
-    if (!wasDragging) return; // clique normal — o onClick cuida
+    if (!wasDragging) return; // plain click; onClick handles it
     ev.preventDefault();
     ev.stopPropagation();
     this.commitArea(rect);
   };
 
-  /** Solta o marquee: afetados = intersecção; container = menor que contém tudo. */
+  /** Releases the marquee: affected = intersection; container = smallest that contains all. */
   private commitArea(rect: DOMRect): void {
     const tagged = Array.from(this.doc.querySelectorAll(`[${TAG_ATTR}]`));
     const affected: ComponentHit[] = [];
@@ -231,7 +224,7 @@ export class SelectionEngine {
   }
 
   private onClick = (ev: MouseEvent): void => {
-    // clique que encerra um drag de área não seleciona nada
+    // a click that ends an area drag selects nothing
     if (this.state.area && this.state.selected.length === 0 && ev.detail === 0) return;
     const hit = this.hitTest(ev.clientX, ev.clientY);
     if (!hit) return;
@@ -248,7 +241,7 @@ export class SelectionEngine {
     }
   };
 
-  /** Roda do mouse sobe (deltaY < 0) ou desce na hierarquia de componentes sob o cursor. */
+  /** Mouse wheel moves up (deltaY < 0) or down the component hierarchy under the cursor. */
   private onWheel = (ev: WheelEvent): void => {
     const current = this.state.hover;
     if (!current) return;
@@ -274,7 +267,7 @@ export class SelectionEngine {
     this.emit({ selected });
   }
 
-  /** Inventário compacto da página: componentes únicos + contagem (contexto lazy). */
+  /** Compact page inventory: unique components + count (lazy context). */
   pageComponents(): PageComponent[] {
     const byTag = new Map<string, PageComponent>();
     for (const el of Array.from(this.doc.querySelectorAll(`[${TAG_ATTR}]`))) {
@@ -303,8 +296,7 @@ export class SelectionEngine {
   }
 
   buildPayload(app: SelectionPayload['app']): SelectionPayload {
-    // Atribuição por componente via stack fica para refinamento futuro; por ora
-    // anexamos a atividade HTTP recente apenas ao primeiro selecionado (MVP).
+    // Recent HTTP activity is attached only to the first selected component.
     const http = this.httpProvider?.() ?? [];
     const selection = this.state.selected.map((hit, i): SelectedComponent => {
       const rect = hit.element.getBoundingClientRect();

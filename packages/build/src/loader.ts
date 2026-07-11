@@ -7,9 +7,9 @@ interface LoaderThis {
 }
 
 /**
- * Webpack loader standalone — é este módulo que vai em `turbopack.rules` no
- * next.config (Turbopack suporta o subconjunto síncrono/assíncrono simples da
- * API de loaders; validado no spike jsx-tagging com Next 15.5).
+ * Standalone webpack loader — this is the module that goes in `turbopack.rules`
+ * in next.config (Turbopack supports the simple sync/async subset of the loader
+ * API; validated with Next 15.5).
  */
 export default function eregionLoader(this: LoaderThis, source: string): void {
   const callback = this.async();
