@@ -59,16 +59,21 @@ export function CommandBar({ engine, models, selectedModel, onModelChange, onDis
         }}
       />
       {models.length > 0 && (
-        <select
-          class="eg-cmd-model"
-          value={selectedModel}
-          title="Modelo que executa este pedido"
-          onChange={(e) => onModelChange((e.target as HTMLSelectElement).value)}
-        >
-          {models.map((m) => (
-            <option key={m.id} value={m.id}>{m.name}</option>
-          ))}
-        </select>
+        <label class="eg-cmd-model" title="Modelo que executa este pedido">
+          <span class="eg-cmd-model-name">
+            ◈ {models.find((m) => m.id === selectedModel)?.name ?? 'Default'}
+          </span>
+          <span class="eg-cmd-model-caret">▾</span>
+          <select
+            class="eg-cmd-model-select"
+            value={selectedModel}
+            onChange={(e) => onModelChange((e.target as HTMLSelectElement).value)}
+          >
+            {models.map((m) => (
+              <option key={m.id} value={m.id}>{m.name}</option>
+            ))}
+          </select>
+        </label>
       )}
       <span class="eg-cmd-hint">↵ enviar</span>
     </div>

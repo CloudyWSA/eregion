@@ -71,18 +71,30 @@ button { all: unset; cursor: pointer; }
 .eg-cmd-input::placeholder { color: var(--eg-muted); }
 .eg-cmd-hint { font: var(--eg-mono); color: var(--eg-muted); white-space: nowrap; }
 .eg-cmd-model {
-  appearance: none;
-  background: none;
-  border: none;
-  outline: none;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border: 1px solid var(--eg-copper-dim);
+  border-radius: 5px;
   cursor: pointer;
-  font: var(--eg-mono);
-  color: var(--eg-muted);
-  max-width: 90px;
-  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: none;
 }
-.eg-cmd-model:hover, .eg-cmd-model:focus-visible { color: var(--eg-copper); }
-.eg-cmd-model option { background: var(--eg-bg); color: var(--eg-text); }
+.eg-cmd-model:hover { border-color: var(--eg-copper); }
+.eg-cmd-model-name { font: var(--eg-mono); color: var(--eg-copper); }
+.eg-cmd-model-caret { font-size: 9px; color: var(--eg-muted); }
+/* o select nativo cobre o controle inteiro, invisível — clique/teclado/a11y de graça */
+.eg-cmd-model-select {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+}
+.eg-cmd-model-select option { background: var(--eg-bg); color: var(--eg-text); }
+.eg-cmd-model:focus-within { border-color: var(--eg-copper); }
 
 /* ---- activity rail: pills dos jobs, canto inferior direito ---- */
 .eg-rail {

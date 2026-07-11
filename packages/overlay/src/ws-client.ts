@@ -20,6 +20,13 @@ export interface ClientOptions {
 const BACKOFF_MS = [500, 1000, 2000, 5000, 10000];
 
 /**
+ * Mensagens de ESTADO (não eventos): quem se inscreve depois delas terem
+ * chegado precisa recebê-las mesmo assim — o chat-ui carrega por import
+ * dinâmico e costuma perder o hello.ok da conexão inicial.
+ */
+const REPLAYABLE = new Set(['hello.ok', 'models.update', 'angular.index']);
+
+/**
  * Cliente WS do overlay. Enfileira enquanto desconectado, reconecta com
  * backoff e re-envia o hello a cada reconexão.
  */
@@ -31,6 +38,7 @@ export class EregionClient {
   private closedByUser = false;
   private handlers = new Set<MessageHandler>();
   private statusHandlers = new Set<StatusHandler>();
+  private replayCache = new Map<string, DaemonMessage & { id: string }>();
   private opts: ClientOptions;
 
   constructor(opts: ClientOptions) {
@@ -60,7 +68,9 @@ export class EregionClient {
         return;
       }
       const res = parseDaemonMessage(data);
-      if (res.ok) for (const fn of this.handlers) fn(res.msg);
+      if (!res.ok) return;
+      if (REPLAYABLE.has(res.msg.type)) this.replayCache.set(res.msg.type, res.msg);
+      for (const fn of this.handlers) fn(res.msg);
     };
     ws.onclose = () => {
       this.ws = null;
@@ -85,6 +95,7 @@ export class EregionClient {
 
   onMessage(fn: MessageHandler): () => void {
     this.handlers.add(fn);
+    for (const msg of this.replayCache.values()) fn(msg);
     return () => this.handlers.delete(fn);
   }
 
