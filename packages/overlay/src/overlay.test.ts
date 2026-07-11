@@ -94,6 +94,25 @@ describe('SelectionEngine', () => {
     expect(SelectionPayload.safeParse(payload).success).toBe(true);
   });
 
+  it('hover numa instância acende as irmãs do mesmo componente (hoverKin)', () => {
+    document.body.innerHTML = `
+      <main>
+        <article id="c1">a</article>
+        <article id="c2">b</article>
+        <article id="c3">c</article>
+      </main>`;
+    for (const id of ['c1', 'c2', 'c3']) {
+      setTag(document.getElementById(id)!, 'src/OrderCard.tsx', 9, 5);
+    }
+    const engine = new SelectionEngine();
+    mockPoint(document.getElementById('c2')!);
+    engine.enable();
+    document.dispatchEvent(new MouseEvent('pointermove', { bubbles: true }));
+    const state = engine.getState();
+    expect(state.hover?.element).toBe(document.getElementById('c2'));
+    expect(state.hoverKin.map((e) => e.id).sort()).toEqual(['c1', 'c3']);
+  });
+
   it('cursor sobre a UI do Eregion não gera hit (não seleciona o que está atrás)', () => {
     const overlayEl = document.createElement('eregion-chat');
     document.body.appendChild(overlayEl);

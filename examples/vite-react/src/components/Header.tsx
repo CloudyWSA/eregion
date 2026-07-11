@@ -10,7 +10,17 @@ export function Header({ titulo }: { titulo: string }) {
         borderBottom: '1px solid #eaeaea',
       }}
     >
-      <h1 style={{ fontSize: 18, fontWeight: 500, letterSpacing: -0.2, margin: 0, color: '#111' }}>
+      <h1
+        style={{
+          fontSize: 34,
+          fontWeight: 'bold',
+          letterSpacing: -1.5,
+          margin: 0,
+          color: '#3b5998',
+          fontFamily: '"Klavika", "lucida grande", tahoma, verdana, arial, sans-serif',
+          textTransform: 'lowercase',
+        }}
+      >
         {titulo}
       </h1>
     </header>

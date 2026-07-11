@@ -7,30 +7,32 @@ interface Props {
 }
 
 interface Box {
-  hit: ComponentHit;
   rect: DOMRect;
-  kind: 'hover' | 'selected';
-  label: string;
+  kind: 'hover' | 'selected' | 'kin';
+  label?: string;
 }
 
-function labelFor(hit: ComponentHit): string {
+function labelFor(hit: ComponentHit, kinCount: number): string {
   const ref = hit.tpl ?? hit.src;
-  return ref ? `${hit.name} — ${ref.file}:${ref.line}` : hit.name;
+  const base = ref ? `${hit.name} — ${ref.file}:${ref.line}` : hit.name;
+  // ×N comunica o raio de impacto: editar o componente muda todas as instâncias
+  return kinCount > 0 ? `${base} ×${kinCount + 1}` : base;
 }
 
 function collectBoxes(state: EngineState): Box[] {
   const boxes: Box[] = state.selected.map((hit) => ({
-    hit,
     rect: hit.element.getBoundingClientRect(),
     kind: 'selected' as const,
-    label: labelFor(hit),
+    label: labelFor(hit, 0),
   }));
   if (state.hover && !state.selected.some((s) => s.element === state.hover!.element)) {
+    for (const el of state.hoverKin) {
+      boxes.push({ rect: el.getBoundingClientRect(), kind: 'kin' });
+    }
     boxes.push({
-      hit: state.hover,
       rect: state.hover.element.getBoundingClientRect(),
       kind: 'hover',
-      label: labelFor(state.hover),
+      label: labelFor(state.hover, state.hoverKin.length),
     });
   }
   return boxes;
@@ -62,7 +64,7 @@ export function HighlightLayer({ state }: Props) {
           class={`eg-box eg-box-${kind}`}
           style={{ left: `${rect.x}px`, top: `${rect.y}px`, width: `${rect.width}px`, height: `${rect.height}px` }}
         >
-          <span class="eg-label">{label}</span>
+          {label && <span class="eg-label">{label}</span>}
         </div>
       ))}
     </div>

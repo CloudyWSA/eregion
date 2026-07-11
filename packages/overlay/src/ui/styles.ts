@@ -16,6 +16,7 @@ export const OVERLAY_CSS = `
   box-sizing: border-box;
 }
 .eg-box-hover { background: #a8622f10; }
+.eg-box-kin { border-style: dashed; border-color: #a8622f60; background: #a8622f08; }
 .eg-box-selected { border-color: #a8622f; background: #a8622f1a; }
 .eg-label {
   position: absolute;

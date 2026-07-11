@@ -8,46 +8,49 @@ export function CarCard({ carro }: { carro: Carro }) {
   return (
     <article
       style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 16,
         background: '#fff',
-        border: '1px solid #ececec',
-        borderRadius: 24,
-        padding: '18px 20px',
-        boxShadow: '0 1px 2px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.06)',
-        fontFamily: 'system-ui, sans-serif',
+        border: '1px solid #b3b3b3',
+        borderRadius: 3,
+        fontFamily: '"lucida grande", tahoma, verdana, arial, sans-serif',
+        fontSize: 11,
+        color: '#333',
+        overflow: 'hidden',
       }}
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
-        <span style={{ fontSize: 16, fontWeight: 600, color: '#18181b', lineHeight: 1.2 }}>
-          {carro.modelo}
-        </span>
-        <span
-          style={{
-            fontSize: 12,
-            fontWeight: 500,
-            color: '#71717a',
-            letterSpacing: 0.4,
-            fontFamily: 'ui-monospace, monospace',
-          }}
-        >
-          {carro.id}
-        </span>
+      <div
+        style={{
+          background: '#3b5998',
+          color: '#fff',
+          padding: '4px 8px',
+          fontSize: 11,
+          fontWeight: 'bold',
+        }}
+      >
+        {carro.modelo}
       </div>
       <div
         style={{
-          flexShrink: 0,
-          fontSize: 15,
-          fontWeight: 600,
-          color: '#047857',
-          background: '#ecfdf5',
-          padding: '6px 12px',
-          borderRadius: 999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 12,
+          background: '#f7f7f7',
+          padding: '8px',
         }}
       >
-        {carro.preco}
+        <span style={{ color: '#3b5998', fontWeight: 'bold', fontSize: 11 }}>{carro.id}</span>
+        <span
+          style={{
+            border: '1px solid #b3b3b3',
+            background: '#edeff4',
+            color: '#333',
+            padding: '2px 6px',
+            fontWeight: 'bold',
+            fontSize: 11,
+          }}
+        >
+          {carro.preco}
+        </span>
       </div>
     </article>
   );

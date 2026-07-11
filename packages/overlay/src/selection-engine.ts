@@ -1,10 +1,13 @@
 import type { HttpActivity, SelectedComponent, SelectionPayload } from '@eregion/protocol';
 import { PROTOCOL_VERSION, TAG_ATTR } from '@eregion/protocol';
-import { activeAdapters, type ComponentHit } from './adapter.js';
+import { activeAdapters, type ComponentHit, type FrameworkAdapter } from './adapter.js';
+import { domAdapter } from './dom-adapter.js';
 
 export interface EngineState {
   active: boolean;
   hover: ComponentHit | null;
+  /** Demais instâncias do componente sob o cursor (mesma origem no código). */
+  hoverKin: Element[];
   selected: ComponentHit[];
 }
 
@@ -18,7 +21,7 @@ function isEregionUi(el: Element): boolean {
 }
 
 export class SelectionEngine {
-  private state: EngineState = { active: false, hover: null, selected: [] };
+  private state: EngineState = { active: false, hover: null, hoverKin: [], selected: [] };
   private listeners = new Set<Listener>();
   private doc: Document;
 
@@ -66,11 +69,11 @@ export class SelectionEngine {
     this.doc.removeEventListener('click', this.onClick, true);
     this.doc.removeEventListener('keydown', this.onKeyDown, true);
     this.doc.removeEventListener('wheel', this.onWheel, true);
-    this.emit({ active: false, hover: null });
+    this.emit({ active: false, hover: null, hoverKin: [] });
   }
 
   clear(): void {
-    this.emit({ selected: [], hover: null });
+    this.emit({ selected: [], hover: null, hoverKin: [] });
   }
 
   /**
@@ -86,16 +89,33 @@ export class SelectionEngine {
   }
 
   resolve(el: Element): ComponentHit | null {
+    return this.resolveWithAdapter(el)?.hit ?? null;
+  }
+
+  private resolveWithAdapter(el: Element): { hit: ComponentHit; adapter: FrameworkAdapter } | null {
     for (const adapter of activeAdapters()) {
       const hit = adapter.resolve(el);
-      if (hit) return hit;
+      if (hit) return { hit, adapter };
     }
     return null;
   }
 
+  /** Instâncias irmãs do hit (excluindo ele próprio). */
+  private kinOf(hit: ComponentHit, adapter: FrameworkAdapter): Element[] {
+    const all = (adapter.instancesOf ?? domAdapter.instancesOf)?.call(adapter, hit) ?? [];
+    return all.filter((el) => el !== hit.element);
+  }
+
   private onPointerMove = (ev: PointerEvent): void => {
-    const hit = this.hitTest(ev.clientX, ev.clientY);
-    if (hit?.element !== this.state.hover?.element) this.emit({ hover: hit });
+    const els = this.doc.elementsFromPoint(ev.clientX, ev.clientY);
+    const top = els[0];
+    const resolved = !top || isEregionUi(top) ? null : this.resolveWithAdapter(top);
+    if (resolved?.hit.element !== this.state.hover?.element) {
+      this.emit({
+        hover: resolved?.hit ?? null,
+        hoverKin: resolved ? this.kinOf(resolved.hit, resolved.adapter) : [],
+      });
+    }
   };
 
   private onClick = (ev: MouseEvent): void => {

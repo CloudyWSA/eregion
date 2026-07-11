@@ -17,6 +17,13 @@ export const domAdapter: FrameworkAdapter = {
   detect() {
     return true;
   },
+  instancesOf(hit: ComponentHit): Element[] {
+    const value = hit.element.getAttribute(TAG_ATTR);
+    if (!value) return [];
+    // o valor é nosso (path:linha:coluna) — basta escapar aspas/backslash p/ o seletor
+    const escaped = value.split('\\').join('\\\\').split('"').join('\\"');
+    return Array.from(document.querySelectorAll(`[${TAG_ATTR}="${escaped}"]`));
+  },
   resolve(el: Element): ComponentHit | null {
     const target = el.closest(`[${TAG_ATTR}]`);
     if (!target) return null;

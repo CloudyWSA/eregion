@@ -29,6 +29,12 @@ export interface FrameworkAdapter {
   /** O framework está presente na página? (ex: window.ng, hook do React) */
   detect(): boolean;
   resolve(el: Element): ComponentHit | null;
+  /**
+   * Outras instâncias renderizadas do MESMO componente (ex: os 12 cards de
+   * uma lista) — o hover acende todas para comunicar o raio de impacto da
+   * edição: muda o componente, não o item.
+   */
+  instancesOf?(hit: ComponentHit): Element[];
   /** Chamado após re-render do framework, para re-sincronizar highlights. */
   onCommit?(cb: () => void): void;
 }
