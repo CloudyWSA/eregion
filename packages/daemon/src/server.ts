@@ -25,6 +25,8 @@ export interface ServerOptions {
   angularIndexer?: AngularIndexer;
   /** Models allowed by the dev's account (discovered at runtime). */
   getModels?: () => import('@eregion/protocol').ModelOption[];
+  /** Skills/slash-commands available to the dev's account (discovered at runtime). */
+  getSkills?: () => import('@eregion/protocol').SkillOption[];
   /** Backend traces (node-agent) received via POST /trace/ingest. */
   traceStore: TraceStore;
 }
@@ -172,6 +174,7 @@ export class DaemonServer {
           model: 'default',
           cwd: this.options.repoRoot,
           models: this.options.getModels?.() ?? [],
+          skills: this.options.getSkills?.() ?? [],
         },
       });
       return;
@@ -195,6 +198,7 @@ export class DaemonServer {
           jobId: msg.payload.jobId ?? msg.id,
           text,
           model: msg.payload.model,
+          images: msg.payload.images,
           requiredSlot: msg.payload.replyTo ? this.options.pool.slotOf(msg.payload.replyTo) : undefined,
         });
         this.broadcast({ type: 'status', payload: { state: 'thinking' } });

@@ -1,9 +1,15 @@
-import type { ChatUsage, DaemonMessage, ModelOption } from '@eregion/protocol';
+import type { ChatUsage, DaemonMessage, ModelOption, SkillOption } from '@eregion/protocol';
+
+export interface PlanItem {
+  text: string;
+  status: 'pending' | 'in_progress' | 'completed';
+}
 
 export type JobStatus = 'queued' | 'running' | 'done' | 'failed';
 
 export interface JobEvent {
   kind: 'tool' | 'edit' | 'error';
+  name?: string;
   label: string;
   detail?: string;
   /** For edits: checkpoint id used to revert. */
@@ -27,6 +33,7 @@ export interface Job {
   events: JobEvent[];
   usage?: ChatUsage;
   durationMs?: number;
+  plan?: PlanItem[];
   /** id/name of the model chosen at dispatch (absent = account default). */
   model?: string;
   modelName?: string;
@@ -45,6 +52,7 @@ export interface UiState {
   connected: boolean;
   /** Models allowed by the account (discovered by the daemon at runtime). */
   models: ModelOption[];
+  skills: SkillOption[];
   /** Current dev choice; 'default' = account default model. */
   selectedModel: string;
   /** Session-accumulated usage (drawer meter). */
@@ -53,17 +61,54 @@ export interface UiState {
 
 type Listener = (state: UiState) => void;
 
+const STORAGE_KEY = 'eregion.jobs.v1';
+
+function loadPersisted(): { jobs: Job[]; totals: UiState['totals'] } | null {
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw) as { jobs: Job[]; totals: UiState['totals'] };
+    // running jobs from a dead page can never finish — surface them as failed
+    for (const job of data.jobs) {
+      if (job.status === 'running' || job.status === 'queued') job.status = 'failed';
+    }
+    return data;
+  } catch {
+    return null;
+  }
+}
+
 export class JobStore {
   private state: UiState = {
     jobs: [],
     permission: null,
     connected: false,
     models: [],
+    skills: [],
     selectedModel: 'default',
     totals: { outputTokens: 0, costUsd: 0, jobs: 0 },
   };
   private listeners = new Set<Listener>();
   private nextJobId = 1;
+
+  constructor() {
+    if (typeof sessionStorage === 'undefined') return;
+    const saved = loadPersisted();
+    if (saved) {
+      this.state = { ...this.state, jobs: saved.jobs, totals: saved.totals };
+      this.nextJobId = saved.jobs.reduce((max, j) => Math.max(max, j.id), 0) + 1;
+    }
+  }
+
+  private persist(): void {
+    if (typeof sessionStorage === 'undefined') return;
+    try {
+      const jobs = this.state.jobs.slice(-30);
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ jobs, totals: this.state.totals }));
+    } catch {
+      // storage full — history is a convenience, never an error
+    }
+  }
 
   subscribe(fn: Listener): () => void {
     this.listeners.add(fn);
@@ -78,6 +123,7 @@ export class JobStore {
   private emit(patch: Partial<UiState>): void {
     this.state = { ...this.state, ...patch };
     for (const fn of this.listeners) fn(this.state);
+    if ('jobs' in patch || 'totals' in patch) this.persist();
   }
 
   // Owning job for an event: by jobId when stamped (parallel pool); without
@@ -134,12 +180,26 @@ export class JobStore {
   handle(msg: DaemonMessage): void {
     switch (msg.type) {
       case 'hello.ok': {
-        const models = msg.payload.models;
-        this.emit({ connected: true, ...(models && models.length > 0 ? { models } : {}) });
+        const { models, skills } = msg.payload;
+        this.emit({
+          connected: true,
+          ...(models && models.length > 0 ? { models } : {}),
+          ...(skills && skills.length > 0 ? { skills } : {}),
+        });
         return;
       }
       case 'models.update':
-        return this.emit({ models: msg.payload.models });
+        return this.emit({
+          models: msg.payload.models,
+          ...(msg.payload.skills && msg.payload.skills.length > 0 ? { skills: msg.payload.skills } : {}),
+        });
+      case 'chat.plan': {
+        const idx = this.targetIndex(msg.payload.jobId);
+        this.patchJob(idx, { plan: msg.payload.items });
+        return;
+      }
+      case 'usage.update':
+        return;
       case 'chat.delta': {
         const idx = this.targetIndex(msg.payload.jobId);
         this.patchJob(idx, (job) => ({ status: 'running', answer: job.answer + msg.payload.text }));
@@ -152,13 +212,14 @@ export class JobStore {
           let found = false;
           for (let i = events.length - 1; i >= 0; i -= 1) {
             const ev = events[i]!;
-            if (ev.kind === 'tool' && ev.label === msg.payload.label && ev.status === 'running') {
-              events[i] = { ...ev, status: msg.payload.status };
+            if (ev.kind === 'tool' && (ev.name ?? ev.label) === msg.payload.name && ev.status === 'running') {
+              events[i] = { ...ev, label: msg.payload.label, status: msg.payload.status };
               found = true;
               break;
             }
           }
-          if (!found) events.push({ kind: 'tool', label: msg.payload.label, status: msg.payload.status });
+          if (!found)
+            events.push({ kind: 'tool', name: msg.payload.name, label: msg.payload.label, status: msg.payload.status });
           return { status: 'running', events };
         });
         return;

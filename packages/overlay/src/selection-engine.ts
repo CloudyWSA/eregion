@@ -251,6 +251,9 @@ export class SelectionEngine {
     });
   }
 
+  /** Alt+click asks for an explanation instead of selecting (set by the host). */
+  onExplain?: (hit: ComponentHit) => void;
+
   private onClick = (ev: MouseEvent): void => {
     // browsers fire a click right after the marquee's pointerup — swallow it
     if (this.suppressNextClick) {
@@ -268,6 +271,11 @@ export class SelectionEngine {
     if (!hit) return;
     ev.preventDefault();
     ev.stopPropagation();
+    if (ev.altKey && this.onExplain) {
+      this.emit({ selected: [hit], area: null });
+      this.onExplain(hit);
+      return;
+    }
     if (ev.shiftKey) this.toggleSelected(hit);
     else this.emit({ selected: [hit], area: null });
   };

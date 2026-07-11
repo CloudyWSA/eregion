@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useState } from 'react';
 import { Header } from './components/Header';
-import { CarCard } from './components/CarCard';
+import { OrderCard } from './components/OrderCard';
 import { Sidebar } from './components/Sidebar';
 import { FacebookAd } from './components/FacebookAd';
 
@@ -10,27 +10,14 @@ interface Order {
   total: number;
 }
 
-function orderToCar(o: Order) {
-  return {
-    id: o.id,
-    model: o.customer,
-    price: o.total.toLocaleString('en-US', { style: 'currency', currency: 'USD' }),
-    year: '—',
-    km: '—',
-    transmission: '—',
-    fuel: '—',
-    color: '—',
-  };
-}
-
 export function App() {
-  const [cars, setCars] = useState<ReturnType<typeof orderToCar>[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
 
   useEffect(() => {
     fetch('http://localhost:3199/api/orders')
       .then((r) => r.json())
-      .then((orders: Order[]) => setCars(orders.map(orderToCar)))
-      .catch(() => setCars([]));
+      .then((data: Order[]) => setOrders(data))
+      .catch(() => setOrders([]));
   }, []);
 
   return (
@@ -50,10 +37,10 @@ export function App() {
       <div style={{ display: 'flex', gap: 16, alignItems: 'stretch', flex: 1 }}>
         <Sidebar />
         <section style={{ display: 'grid', gap: 12, flex: 1, alignContent: 'start' }}>
-          {cars.map((c, i) => (
-            <Fragment key={c.id}>
-              {i === Math.floor(cars.length / 2) && <FacebookAd />}
-              <CarCard car={c} />
+          {orders.map((o, i) => (
+            <Fragment key={o.id}>
+              {i === Math.floor(orders.length / 2) && <FacebookAd />}
+              <OrderCard order={o} />
             </Fragment>
           ))}
         </section>

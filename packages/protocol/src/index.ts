@@ -20,6 +20,8 @@ export {
   makeEnvelope,
   type ParseResult,
   ModelOption,
+  SkillOption,
+  ChatImage,
 } from './messages.js';
 export { TAG_ATTR, formatTagValue, parseTagValue } from './source-tag.js';
 export { BackendTrace, DbQuery } from './trace.js';

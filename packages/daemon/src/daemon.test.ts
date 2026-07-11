@@ -103,6 +103,7 @@ describe('DaemonServer', () => {
     broker,
     pool: poolStub,
     traceStore: new TraceStore(),
+    getSkills: () => [{ id: 'commit', name: 'commit', description: 'create a commit', argumentHint: '<message>' }],
   });
   let port = 0;
 
@@ -145,7 +146,10 @@ describe('DaemonServer', () => {
     const ws = await connect();
     const hello = nextMessage(ws);
     sendMsg(ws, { type: 'hello', payload: { token: TOKEN } });
-    expect(await hello).toMatchObject({ type: 'hello.ok', payload: { cwd: '/repo' } });
+    expect(await hello).toMatchObject({
+      type: 'hello.ok',
+      payload: { cwd: '/repo', skills: [{ id: 'commit', name: 'commit' }] },
+    });
 
     sendMsg(ws, { type: 'selection.update', payload: { payload: selection } });
     sendMsg(ws, { type: 'chat.send', payload: { text: 'make this button green', attachSelection: true } });

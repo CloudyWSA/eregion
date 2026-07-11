@@ -6,8 +6,13 @@ import {
   type SDKMessage,
   type SDKUserMessage,
 } from '@anthropic-ai/claude-agent-sdk';
-import type { ChatUsage } from '@eregion/protocol';
+import type { ChatImage, ChatUsage } from '@eregion/protocol';
 import type { PermissionBroker } from './permission-broker.js';
+
+export interface PlanItem {
+  text: string;
+  status: 'pending' | 'in_progress' | 'completed';
+}
 
 export interface RuntimeOptions {
   cwd: string;
@@ -20,6 +25,8 @@ export interface RuntimeEvents {
   onSessionInit(sessionId: string): void;
   onDelta(text: string): void;
   onToolUse(name: string, label: string, status: 'running' | 'done'): void;
+  /** TodoWrite plan; a later TodoWrite replaces the previous list. */
+  onPlan(items: PlanItem[]): void;
   onResult(usage: ChatUsage, durationMs: number): void;
   onEditApplied(file: string, diff: string, checkpointId?: string): void;
   onStatus(state: 'idle' | 'thinking'): void;
@@ -40,6 +47,8 @@ GOLDEN RULE: for any question about selected components, their source files, pro
 requests or queries, use the mcp__eregion__* tools FIRST — the instrumentation already
 knows the answer. Only use Glob/Grep when they don't cover it. Edit the source code
 directly; the dev server's hot-reload shows the result to the developer immediately.
+When creating UI for data that has a backend trace available, first call get_backend_trace
+and type the new code according to the real response shape.
 Reply in the developer's language.`;
 
 const MAX_TURNS_PER_CONNECTION = 40;
@@ -93,6 +102,8 @@ export class AgentRuntime {
   private lastUserMessageUuid: string | undefined;
   /** In-flight tool_use: id → {name, label}, to mark 'done' on tool_result. */
   private inFlightTools = new Map<string, { name: string; label: string }>();
+  /** Parent Task tool_use id → count of child tool_use blocks (subagent steps). */
+  private subagentSteps = new Map<string, number>();
   sessionId: string | null = null;
 
   constructor(
@@ -115,15 +126,25 @@ export class AgentRuntime {
     if (!this.queryHandle && this.inbox.length > 0) this.start();
   }
 
-  sendMessage(text: string, model?: string): void {
+  sendMessage(text: string, model?: string, images?: ChatImage[]): void {
     // streaming input has no echo of the dev's message — we mint the uuid
     // ourselves so rewindFiles has a valid checkpoint to target
     const uuid = randomUUID();
     this.lastUserMessageUuid = uuid;
+    const content =
+      images && images.length > 0
+        ? [
+            { type: 'text' as const, text },
+            ...images.map((i) => ({
+              type: 'image' as const,
+              source: { type: 'base64' as const, media_type: i.mediaType, data: i.data },
+            })),
+          ]
+        : text;
     this.inbox.push({
       type: 'user',
       uuid,
-      message: { role: 'user', content: text },
+      message: { role: 'user', content },
       parent_tool_use_id: null,
       session_id: this.sessionId ?? '',
     } as SDKUserMessage);
@@ -187,7 +208,8 @@ export class AgentRuntime {
         includePartialMessages: true,
         enableFileCheckpointing: true,
         maxTurns: MAX_TURNS_PER_CONNECTION,
-        settingSources: ['project'],
+        // 'user' so the dev's personal skills (~/.claude) are available to sessions.
+        settingSources: ['user', 'project'],
         // Mechanical scans go to a haiku subagent: intermediate junk stays out
         // of the main context and costs ~10x less.
         agents: {
@@ -247,7 +269,9 @@ export class AgentRuntime {
             if (typeof block === 'object' && block !== null && 'type' in block && block.type === 'tool_result') {
               const info = this.inFlightTools.get((block as { tool_use_id: string }).tool_use_id);
               if (info) {
-                this.inFlightTools.delete((block as { tool_use_id: string }).tool_use_id);
+                const id = (block as { tool_use_id: string }).tool_use_id;
+                this.inFlightTools.delete(id);
+                this.subagentSteps.delete(id);
                 this.events.onToolUse(info.name, info.label, 'done');
               }
             }
@@ -256,13 +280,23 @@ export class AgentRuntime {
         return;
       }
       case 'assistant': {
-        if (msg.parent_tool_use_id) return;
+        if (msg.parent_tool_use_id) {
+          // subagent content stays out of the chat; we only surface its
+          // progress as a step count on the parent Task step.
+          this.bumpSubagentSteps(msg.parent_tool_use_id, msg.message.content);
+          return;
+        }
         for (const block of msg.message.content) {
           if (block.type === 'tool_use') {
             const input = block.input as Record<string, unknown>;
             if (EDIT_TOOLS.has(block.name)) {
               // edits become their own card (edit.applied) — no duplicate step
               this.trackEdit(block.name, input);
+              continue;
+            }
+            if (block.name === 'TodoWrite') {
+              // plans render as a checklist, not a generic tool step
+              this.emitPlan(input);
               continue;
             }
             const label = toolLabel(block.name, input);
@@ -287,6 +321,41 @@ export class AgentRuntime {
       default:
         return;
     }
+  }
+
+  /** Parses TodoWrite input defensively into a plan; SDK shape may drift. */
+  private emitPlan(input: Record<string, unknown>): void {
+    const raw = Array.isArray(input.todos) ? (input.todos as unknown[]) : [];
+    const items: PlanItem[] = [];
+    for (const todo of raw) {
+      if (typeof todo !== 'object' || todo === null) continue;
+      const o = todo as Record<string, unknown>;
+      const text =
+        typeof o.content === 'string' ? o.content : typeof o.text === 'string' ? o.text : '';
+      if (!text) continue;
+      const status: PlanItem['status'] =
+        o.status === 'in_progress' || o.status === 'completed' ? o.status : 'pending';
+      items.push({ text, status });
+    }
+    this.events.onPlan(items);
+  }
+
+  /** Counts a subagent's tool_use blocks and refreshes the parent Task label. */
+  private bumpSubagentSteps(parentId: string, content: unknown): void {
+    if (!Array.isArray(content)) return;
+    let added = 0;
+    for (const block of content) {
+      if (typeof block === 'object' && block !== null && (block as { type?: unknown }).type === 'tool_use')
+        added += 1;
+    }
+    if (added === 0) return;
+    const count = (this.subagentSteps.get(parentId) ?? 0) + added;
+    this.subagentSteps.set(parentId, count);
+    const info = this.inFlightTools.get(parentId);
+    if (!info) return; // parent Task step already finished or never tracked
+    // name stays 'Task' so the UI can match this update to the running step.
+    info.label = `exploring with subagent (${count} steps)`;
+    this.events.onToolUse('Task', info.label, 'running');
   }
 
   /** Auto-approved Edit/Write produce an audit card in the chat. */

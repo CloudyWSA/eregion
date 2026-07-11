@@ -58,6 +58,7 @@ export const OVERLAY_CSS = `
 .eg-btn:hover { color: #1d1d22; }
 .eg-btn:focus-visible { outline: 1px solid #a8622f; }
 .eg-btn-on { color: #a8622f; }
+.eg-usage { font: 10.5px ui-monospace, monospace; color: #73737d; padding: 0 4px; }
 .eg-dot { width: 6px; height: 6px; border-radius: 50%; margin: 0 5px; }
 .eg-dot-open { background: #4e7a5a; }
 .eg-dot-connecting { background: #b8a06a; }

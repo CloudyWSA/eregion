@@ -9,9 +9,11 @@ class FakeRuntime {
   sessionId: string | null = null;
   pendingMessages = 0;
   sent: string[] = [];
+  sentImages: unknown[] = [];
   constructor(public events: RuntimeEvents) {}
-  sendMessage(text: string): void {
+  sendMessage(text: string, _model?: string, images?: unknown): void {
     this.sent.push(text);
+    if (images !== undefined) this.sentImages.push(images);
   }
   finishTurn(): void {
     this.events.onResult(usage, 100);
@@ -88,6 +90,24 @@ describe('RuntimePool', () => {
       { type: 'chat.delta', payload: { text: 'response B', jobId: 'b' } },
       { type: 'edit.applied', payload: { file: 'src/x.tsx', jobId: 'b' } },
     ]);
+  });
+
+  it('stamps onPlan events as chat.plan with the origin jobId', () => {
+    const { pool, runtimes, emitted } = makePool(1);
+    pool.dispatch({ jobId: 'a', text: 'a' });
+    const items = [
+      { text: 'read the file', status: 'completed' as const },
+      { text: 'edit it', status: 'in_progress' as const },
+    ];
+    runtimes[0]!.events.onPlan(items);
+    expect(emitted).toContainEqual({ type: 'chat.plan', payload: { items, jobId: 'a' } });
+  });
+
+  it('forwards attached images to the runtime', () => {
+    const { pool, runtimes } = makePool(1);
+    const images = [{ mediaType: 'image/png', data: 'aGVsbG8=' }];
+    pool.dispatch({ jobId: 'a', text: 'look', images });
+    expect(runtimes[0]!.sentImages).toEqual([images]);
   });
 
   it('cancel removes a queued job without touching running ones', async () => {

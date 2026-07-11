@@ -2,6 +2,7 @@ import { Fragment } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import type { Job, JobEvent, JobStatus } from '../store.js';
 import { Anchored, type AnchorTarget } from './anchored.js';
+import { DiffView } from './diff.js';
 import { Markdown } from './markdown.js';
 
 const STATUS_VERB: Record<JobStatus, string> = {
@@ -46,7 +47,11 @@ function Step({ ev, onRevert }: { ev: JobEvent; onRevert(id: string): void }) {
         {ev.checkpointId && (
           <button class="eg-revert" onClick={() => onRevert(ev.checkpointId!)}>revert</button>
         )}
-        {showDiff && ev.detail && <div class="eg-step-diff">{ev.detail}</div>}
+        {showDiff && ev.detail && (
+          <div class="eg-step-diff">
+            <DiffView diff={ev.detail} file={ev.label} />
+          </div>
+        )}
       </div>
     );
   }
@@ -101,6 +106,18 @@ export function JobPopover({ thread, anchor, onClose, onRevert, onReply }: Props
           <button class="eg-x" onClick={onClose} title="Close (the request keeps running)">✕</button>
         </header>
         <div class="eg-job-body">
+          {last.plan && last.plan.length > 0 && (
+            <div class="eg-plan">
+              {last.plan.map((item, i) => (
+                <div key={i} class={`eg-plan-item eg-plan-${item.status}`}>
+                  <span class="eg-plan-mark">
+                    {item.status === 'completed' ? '●' : item.status === 'in_progress' ? '◐' : '○'}
+                  </span>
+                  {item.text}
+                </div>
+              ))}
+            </div>
+          )}
           {thread.map((turn, ti) => (
             <Fragment key={turn.jobId}>
               {ti > 0 && <div class="eg-turn-prompt">{turn.prompt}</div>}
@@ -116,6 +133,15 @@ export function JobPopover({ thread, anchor, onClose, onRevert, onReply }: Props
           ))}
         </div>
         <footer class="eg-foot">
+          {last.status === 'done' && thread.some((t) => t.events.some((e) => e.kind === 'edit')) && (
+            <button
+              class="eg-commit"
+              title="Ask the assistant to commit this job's changes"
+              onClick={() => onReply('Commit the changes from this request as one atomic commit with a good message. Nothing else.')}
+            >
+              commit
+            </button>
+          )}
           <input
             class="eg-reply"
             value={reply}

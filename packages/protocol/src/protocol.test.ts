@@ -59,6 +59,10 @@ describe('WS messages — round-trip', () => {
     { type: 'hello', payload: { token: 'tok_abc' } },
     { type: 'selection.update', payload: { payload: examplePayload } },
     { type: 'chat.send', payload: { text: 'standardize these buttons', attachSelection: true } },
+    {
+      type: 'chat.send',
+      payload: { text: 'what is this?', attachSelection: false, images: [{ mediaType: 'image/png', data: 'aGVsbG8=' }] },
+    },
     { type: 'chat.cancel', payload: {} },
     { type: 'permission.respond', payload: { requestId: 'r1', allow: true, remember: true } },
     { type: 'mode.set', payload: { mode: 'review' } },
@@ -77,6 +81,35 @@ describe('WS messages — round-trip', () => {
 
   const daemonCases = [
     { type: 'hello.ok', payload: { sessionId: null, model: 'sonnet', cwd: '/repo' } },
+    {
+      type: 'hello.ok',
+      payload: {
+        sessionId: null,
+        model: 'sonnet',
+        cwd: '/repo',
+        models: [{ id: 'sonnet', name: 'Sonnet' }],
+        skills: [{ id: 'commit', name: 'commit', description: 'create a commit', argumentHint: '<message>' }],
+      },
+    },
+    {
+      type: 'models.update',
+      payload: {
+        models: [{ id: 'sonnet', name: 'Sonnet' }],
+        skills: [{ id: 'review', name: 'review', description: 'review the diff' }],
+      },
+    },
+    {
+      type: 'chat.plan',
+      payload: {
+        items: [
+          { text: 'read the component', status: 'completed' },
+          { text: 'apply the change', status: 'in_progress' },
+          { text: 'verify', status: 'pending' },
+        ],
+        jobId: 'j1',
+      },
+    },
+    { type: 'usage.update', payload: { jobs: 3, outputTokens: 1200, costUsd: 0.42 } },
     { type: 'hello.error', payload: { code: 'bad_token', message: 'invalid token' } },
     { type: 'chat.delta', payload: { text: 'Applying the pattern…' } },
     { type: 'chat.tool', payload: { name: 'mcp__eregion__get_selection', label: '🔍 selection', status: 'done' } },
@@ -114,6 +147,28 @@ describe('WS messages — rejection', () => {
     const res = parseDaemonMessage({ id: 'x', type: 'status', payload: { state: 'idle' } });
     expect(res.ok).toBe(false);
     if (!res.ok) expect(res.error).toContain('envelope');
+  });
+
+  it('rejects an image larger than 2MB', () => {
+    const tooBig = 'A'.repeat(3_000_000); // ~2.25MB decoded
+    const res = parseClientMessage(
+      makeEnvelope('x', {
+        type: 'chat.send',
+        payload: { text: 'hi', attachSelection: false, images: [{ mediaType: 'image/png', data: tooBig }] },
+      } as never),
+    );
+    expect(res.ok).toBe(false);
+  });
+
+  it('rejects more than 4 images', () => {
+    const one = { mediaType: 'image/png', data: 'aGVsbG8=' };
+    const res = parseClientMessage(
+      makeEnvelope('x', {
+        type: 'chat.send',
+        payload: { text: 'hi', attachSelection: false, images: [one, one, one, one, one] },
+      } as never),
+    );
+    expect(res.ok).toBe(false);
   });
 
   it('does not throw on arbitrary input', () => {

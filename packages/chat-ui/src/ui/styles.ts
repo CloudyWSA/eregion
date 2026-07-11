@@ -75,6 +75,16 @@ button:focus-visible { outline: 1px solid var(--eg-accent); outline-offset: 1px;
 .eg-ask-row { display: flex; align-items: center; gap: 6px; }
 .eg-chips { display: flex; gap: 4px; flex-wrap: wrap; flex: 1; min-width: 0; }
 .eg-chip-area { border-style: dashed; }
+.eg-chip-pinned { border-color: var(--eg-accent); }
+.eg-variants { color: var(--eg-muted); border: 1px solid var(--eg-line); border-radius: 3px; padding: 2px 6px; flex: none; }
+.eg-variants:hover { color: var(--eg-accent); border-color: var(--eg-accent); }
+.eg-variants-on { color: var(--eg-accent); border-color: var(--eg-accent); }
+.eg-pin { color: var(--eg-accent); padding: 0 2px; font-size: 10px; }
+.eg-mentions { display: flex; flex-direction: column; border-top: 1px solid var(--eg-line); padding-top: 4px; }
+.eg-mention { display: flex; justify-content: space-between; gap: 10px; padding: 3px 4px; border-radius: 3px; color: var(--eg-ink); }
+.eg-mention:hover { background: var(--eg-srf-2); }
+.eg-mention-meta { color: var(--eg-muted); }
+.eg-tray-errors .eg-tray-prompt { color: var(--eg-err); }
 .eg-chip {
   color: var(--eg-accent);
   border: 1px solid var(--eg-accent-soft);
@@ -132,6 +142,11 @@ button:focus-visible { outline: 1px solid var(--eg-accent); outline-offset: 1px;
 .eg-x:hover { color: var(--eg-ink); }
 
 .eg-job-body { display: flex; flex-direction: column; gap: 8px; padding: 8px 10px; max-height: 44vh; overflow-y: auto; }
+.eg-plan { display: flex; flex-direction: column; gap: 2px; padding: 4px 6px; background: var(--eg-srf-2); border-radius: 3px; }
+.eg-plan-item { display: flex; gap: 6px; color: var(--eg-muted); }
+.eg-plan-completed { color: var(--eg-muted); text-decoration: line-through; text-decoration-color: var(--eg-line); }
+.eg-plan-in_progress { color: var(--eg-ink); }
+.eg-plan-mark { color: var(--eg-accent); flex: none; }
 .eg-steps { display: flex; flex-direction: column; }
 .eg-step { position: relative; display: flex; align-items: baseline; gap: 8px; padding: 2px 0 2px 13px; flex-wrap: wrap; }
 .eg-step::before {
@@ -188,6 +203,14 @@ button:focus-visible { outline: 1px solid var(--eg-accent); outline-offset: 1px;
   margin: 2px 0 2px 13px;
   color: var(--eg-muted);
 }
+.eg-diff { display: flex; flex-direction: column; }
+.eg-diff-line { display: flex; gap: 6px; white-space: pre; }
+.eg-diff-sign { flex: none; width: 10px; text-align: center; color: var(--eg-muted); user-select: none; }
+.eg-diff-add { background: #4e7a5a14; }
+.eg-diff-add .eg-diff-sign { color: var(--eg-ok); }
+.eg-diff-del { background: #ad554b12; }
+.eg-diff-del .eg-diff-sign { color: var(--eg-err); }
+.eg-diff-code { overflow-x: auto; }
 .eg-revert { color: var(--eg-err); }
 .eg-revert:hover { text-decoration: underline; }
 .eg-foot {
@@ -211,6 +234,8 @@ button:focus-visible { outline: 1px solid var(--eg-accent); outline-offset: 1px;
 }
 .eg-reply:focus { border-color: var(--eg-accent); background: var(--eg-srf); }
 .eg-foot-metrics { white-space: nowrap; }
+.eg-commit { color: var(--eg-accent); border: 1px solid var(--eg-line); border-radius: 3px; padding: 2px 8px; flex: none; }
+.eg-commit:hover { border-color: var(--eg-accent); }
 .eg-turn-prompt {
   color: var(--eg-ink);
   background: var(--eg-srf-2);

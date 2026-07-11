@@ -1,9 +1,25 @@
+import type { CapturedError } from '@eregion/overlay';
 import type { Job, PendingPermission } from '../store.js';
 
-export function JobTray({ jobs, onOpen }: { jobs: Job[]; onOpen(jobId: string): void }) {
-  if (jobs.length === 0) return null;
+interface TrayProps {
+  jobs: Job[];
+  errors: CapturedError[];
+  onOpen(jobId: string): void;
+  onFixErrors(): void;
+}
+
+export function JobTray({ jobs, errors, onOpen, onFixErrors }: TrayProps) {
+  if (jobs.length === 0 && errors.length === 0) return null;
   return (
     <div class="eg-tray">
+      {errors.length > 0 && (
+        <button class="eg-tray-pill eg-tray-errors" onClick={onFixErrors} title={errors[errors.length - 1]!.message}>
+          <span class="eg-dot failed" />
+          <span class="eg-tray-prompt">
+            {errors.length} console {errors.length === 1 ? 'error' : 'errors'} — fix
+          </span>
+        </button>
+      )}
       {jobs.map((job) => (
         <button key={job.rootId} class="eg-tray-pill" onClick={() => onOpen(job.rootId)}>
           <span class={`eg-dot ${job.status}`} />

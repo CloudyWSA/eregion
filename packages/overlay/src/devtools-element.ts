@@ -1,6 +1,7 @@
 import { h, render } from 'preact';
 import { registerAdapter } from './adapter.js';
 import { domAdapter } from './dom-adapter.js';
+import { installErrorCapture } from './console-errors.js';
 import { installNetworkPatch, recentHttpActivity } from './network-patch.js';
 import { SelectionEngine } from './selection-engine.js';
 import { EregionClient, type EregionGlobal } from './ws-client.js';
@@ -28,6 +29,7 @@ export class EregionDevtoolsElement extends HTMLElement {
     // Network patch: injects traceparent into the app's requests and feeds the
     // buffer the selection-engine attaches to the payload (frontend → backend trace).
     installNetworkPatch({ traceOrigins: window.__EREGION__?.traceOrigins });
+    installErrorCapture();
     this.engine.httpProvider = () => recentHttpActivity();
 
     const daemon = this.options.daemon ?? window.__EREGION__;

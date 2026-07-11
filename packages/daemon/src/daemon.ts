@@ -10,7 +10,7 @@ import { AgentRuntime } from './agent-runtime.js';
 import { AngularIndexer } from './angular-indexer.js';
 import { InstrumentationCache } from './instrumentation-cache.js';
 import { createInstrumentationServer } from './mcp-tools.js';
-import { discoverModels } from './model-catalog.js';
+import { discoverCatalog } from './model-catalog.js';
 import { PermissionBroker } from './permission-broker.js';
 import { RuntimePool } from './runtime-pool.js';
 import { DaemonServer } from './server.js';
@@ -58,9 +58,20 @@ export async function startDaemon(options: DaemonOptions = {}): Promise<Daemon> 
   });
   const mcpServer = createInstrumentationServer(cache, repoRoot, traceStore);
 
+  // Session-lifetime totals, summed from each chat.result and rebroadcast.
+  const usageTotals = { jobs: 0, outputTokens: 0, costUsd: 0 };
+
   const pool = new RuntimePool({
     size: parallel,
-    emit: (msg) => server.broadcast(msg),
+    emit: (msg) => {
+      server.broadcast(msg);
+      if (msg.type === 'chat.result') {
+        usageTotals.jobs += 1;
+        usageTotals.outputTokens += msg.payload.usage.outputTokens;
+        usageTotals.costUsd += msg.payload.usage.costUsd ?? 0;
+        server.broadcast({ type: 'usage.update', payload: { ...usageTotals } });
+      }
+    },
     makeRuntime: (slotIndex, events) =>
       new AgentRuntime(
         {
@@ -83,12 +94,15 @@ export async function startDaemon(options: DaemonOptions = {}): Promise<Daemon> 
   // is cheap; the scan only runs for an Angular app.
   const angularIndexer = new AngularIndexer(repoRoot);
 
-  // Async discovery: hello.ok carries the list if already resolved; otherwise
+  // Async discovery: hello.ok carries the lists if already resolved; otherwise
   // models.update arrives on broadcast once the probe responds.
   let models: import('@eregion/protocol').ModelOption[] = [];
-  void discoverModels(repoRoot).then((found) => {
-    models = found;
-    if (found.length > 0) server.broadcast({ type: 'models.update', payload: { models: found } });
+  let skills: import('@eregion/protocol').SkillOption[] = [];
+  void discoverCatalog(repoRoot).then((found) => {
+    models = found.models;
+    skills = found.skills;
+    if (found.models.length > 0 || found.skills.length > 0)
+      server.broadcast({ type: 'models.update', payload: { models: found.models, skills: found.skills } });
   });
 
   const server = new DaemonServer({
@@ -101,6 +115,7 @@ export async function startDaemon(options: DaemonOptions = {}): Promise<Daemon> 
     angularIndexer,
     traceStore,
     getModels: () => models,
+    getSkills: () => skills,
   });
 
   let port = PORT_RANGE_START;

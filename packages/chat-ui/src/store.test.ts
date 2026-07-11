@@ -64,7 +64,9 @@ describe('JobStore', () => {
     store.dispatch('x', ['A']);
     store.handle({ type: 'chat.tool', payload: { name: 't', label: 'get_selection', status: 'running' } });
     store.handle({ type: 'chat.tool', payload: { name: 't', label: 'get_selection', status: 'done' } });
-    expect(store.getState().jobs[0]!.events).toEqual([{ kind: 'tool', label: 'get_selection', status: 'done' }]);
+    expect(store.getState().jobs[0]!.events).toEqual([
+      { kind: 'tool', name: 't', label: 'get_selection', status: 'done' },
+    ]);
   });
 
   it('edit.applied becomes an event with a checkpoint; error marks the job as failed', () => {

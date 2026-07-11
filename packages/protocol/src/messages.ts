@@ -6,6 +6,28 @@ import { PROTOCOL_VERSION, SelectionPayload } from './selection-payload.js';
 // Client → daemon
 // ---------------------------------------------------------------------------
 
+/** ~2MB decoded — bigger images blow the context budget and the frame size. */
+const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
+
+/** Approximate decoded byte length of a base64 string (ignoring whitespace). */
+function base64Bytes(data: string): number {
+  const padding = data.endsWith('==') ? 2 : data.endsWith('=') ? 1 : 0;
+  return Math.floor((data.length * 3) / 4) - padding;
+}
+
+export const ChatImage = z
+  .object({
+    /** e.g. 'image/png', 'image/jpeg' */
+    mediaType: z.string().min(1),
+    /** base64-encoded bytes (no data: URI prefix) */
+    data: z.string().min(1),
+  })
+  .refine((img) => base64Bytes(img.data) <= MAX_IMAGE_BYTES, {
+    message: 'image exceeds 2MB',
+    path: ['data'],
+  });
+export type ChatImage = z.infer<typeof ChatImage>;
+
 export const ClientMessage = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('hello'),
@@ -30,6 +52,8 @@ export const ClientMessage = z.discriminatedUnion('type', [
       model: z.string().optional(),
       /** jobId of the turn being replied to — routes to the same session. */
       replyTo: z.string().optional(),
+      /** Inline images (base64), max 2MB each and 4 per message. */
+      images: z.array(ChatImage).max(4).optional(),
     }),
   }),
   z.object({ type: z.literal('chat.cancel'), payload: z.object({ jobId: z.string().optional() }) }),
@@ -67,6 +91,19 @@ export const ModelOption = z.object({
 });
 export type ModelOption = z.infer<typeof ModelOption>;
 
+/** Skill/slash-command available in the dev's Claude Code — discovered at runtime. */
+export const SkillOption = z.object({
+  /** command name without the leading slash (also used as id) */
+  id: z.string(),
+  /** display name (same as id today, kept separate for the UI) */
+  name: z.string(),
+  /** what the skill does */
+  description: z.string(),
+  /** hint for arguments (e.g. '<file>') */
+  argumentHint: z.string().optional(),
+});
+export type SkillOption = z.infer<typeof SkillOption>;
+
 export const ChatUsage = z.object({
   inputTokens: z.number().int().nonnegative(),
   outputTokens: z.number().int().nonnegative(),
@@ -84,6 +121,8 @@ export const DaemonMessage = z.discriminatedUnion('type', [
       cwd: z.string(),
       /** May arrive empty while discovery is still running — see models.update. */
       models: z.array(ModelOption).optional(),
+      /** May arrive empty while discovery is still running — see models.update. */
+      skills: z.array(SkillOption).optional(),
     }),
   }),
   z.object({
@@ -149,7 +188,30 @@ export const DaemonMessage = z.discriminatedUnion('type', [
   }),
   z.object({
     type: z.literal('models.update'),
-    payload: z.object({ models: z.array(ModelOption) }),
+    payload: z.object({
+      models: z.array(ModelOption),
+      skills: z.array(SkillOption).optional(),
+    }),
+  }),
+  z.object({
+    type: z.literal('chat.plan'),
+    payload: z.object({
+      items: z.array(
+        z.object({
+          text: z.string(),
+          status: z.enum(['pending', 'in_progress', 'completed']),
+        }),
+      ),
+      jobId: z.string().optional(),
+    }),
+  }),
+  z.object({
+    type: z.literal('usage.update'),
+    payload: z.object({
+      jobs: z.number().int().nonnegative(),
+      outputTokens: z.number().int().nonnegative(),
+      costUsd: z.number().nonnegative(),
+    }),
   }),
 ]);
 export type DaemonMessage = z.infer<typeof DaemonMessage>;

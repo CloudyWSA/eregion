@@ -1,4 +1,4 @@
-import type { DaemonMessage } from '@eregion/protocol';
+import type { ChatImage, DaemonMessage } from '@eregion/protocol';
 import type { AgentRuntime, RuntimeEvents } from './agent-runtime.js';
 
 export interface PoolJob {
@@ -8,6 +8,8 @@ export interface PoolJob {
   requiredSlot?: number;
   /** ModelOption id; absent = the account's default model. */
   model?: string;
+  /** Inline images attached to the prompt. */
+  images?: ChatImage[];
 }
 
 interface Slot {
@@ -126,6 +128,7 @@ export class RuntimePool {
       onSessionInit: () => undefined, // persistence is makeRuntime's responsibility
       onDelta: (text) => emit({ type: 'chat.delta', payload: { text, jobId: jobId() } }),
       onToolUse: (name, label, status) => emit({ type: 'chat.tool', payload: { name, label, status, jobId: jobId() } }),
+      onPlan: (items) => emit({ type: 'chat.plan', payload: { items, jobId: jobId() } }),
       onResult: (usage, durationMs) => {
         emit({ type: 'chat.result', payload: { usage, durationMs, jobId: jobId() } });
         this.finish(slot);
@@ -169,7 +172,7 @@ export class RuntimePool {
       const oldest = this.jobSlots.keys().next().value;
       if (oldest !== undefined) this.jobSlots.delete(oldest);
     }
-    slot.runtime.sendMessage(job.text, job.model);
+    slot.runtime.sendMessage(job.text, job.model, job.images);
   }
 
   private finish(slot: Slot): void {

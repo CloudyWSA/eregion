@@ -55,6 +55,7 @@ export { domAdapter } from './dom-adapter.js';
 export { SelectionEngine, areaAnchor, type AreaState, type EngineState } from './selection-engine.js';
 export { EregionClient, type ClientOptions, type ConnectionStatus, type EregionGlobal } from './ws-client.js';
 export { mount, DEVTOOLS_TAG, EregionDevtoolsElement, type MountOptions } from './devtools-element.js';
+export { installErrorCapture, recentErrors, clearErrors, onErrors, type CapturedError } from './console-errors.js';
 export {
   installNetworkPatch,
   recentRequests,
