@@ -94,12 +94,23 @@ describe('SelectionEngine', () => {
     expect(SelectionPayload.safeParse(payload).success).toBe(true);
   });
 
-  it('hit-test ignora elementos do próprio overlay', () => {
-    const overlayEl = document.createElement('eregion-devtools');
+  it('cursor sobre a UI do Eregion não gera hit (não seleciona o que está atrás)', () => {
+    const overlayEl = document.createElement('eregion-chat');
     document.body.appendChild(overlayEl);
     const engine = new SelectionEngine();
     mockPoint(overlayEl, document.getElementById('b1')!);
-    const hit = engine.hitTest(0, 0);
-    expect(hit?.element).toBe(document.getElementById('b1'));
+    expect(engine.hitTest(0, 0)).toBeNull();
+  });
+
+  it('clique sobre a UI do Eregion não é interceptado (botões dos popovers funcionam)', () => {
+    const chatEl = document.createElement('eregion-chat');
+    document.body.appendChild(chatEl);
+    const engine = new SelectionEngine();
+    mockPoint(chatEl);
+    engine.enable();
+    const ev = new MouseEvent('click', { bubbles: true, cancelable: true });
+    chatEl.dispatchEvent(ev);
+    expect(ev.defaultPrevented).toBe(false);
+    expect(engine.getState().selected).toEqual([]);
   });
 });

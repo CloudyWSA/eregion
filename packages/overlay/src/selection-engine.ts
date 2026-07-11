@@ -73,12 +73,16 @@ export class SelectionEngine {
     this.emit({ selected: [], hover: null });
   }
 
-  /** Resolve o elemento sob o ponto, ignorando os nós do próprio overlay. */
+  /**
+   * Resolve o elemento sob o ponto. Cursor sobre a UI do Eregion = nenhum
+   * hit — pular para o que está atrás roubaria cliques dos popovers (e
+   * selecionaria componentes escondidos sob eles).
+   */
   hitTest(x: number, y: number): ComponentHit | null {
     const els = this.doc.elementsFromPoint(x, y);
-    const el = els.find((e) => !isEregionUi(e));
-    if (!el) return null;
-    return this.resolve(el);
+    const top = els[0];
+    if (!top || isEregionUi(top)) return null;
+    return this.resolve(top);
   }
 
   resolve(el: Element): ComponentHit | null {

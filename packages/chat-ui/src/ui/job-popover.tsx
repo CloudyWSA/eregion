@@ -79,7 +79,7 @@ export function JobPopover({ job, anchor, onClose, onRevert }: Props) {
   return (
     <Anchored anchor={anchor} estimatedHeight={220}>
       <div class="eg-job">
-        <header class="eg-job-head">
+        <header class="eg-job-head eg-drag">
           <span class={`eg-dot ${job.status}`} />
           <span class="eg-job-title">{job.prompt}</span>
           <span class="eg-job-meta">

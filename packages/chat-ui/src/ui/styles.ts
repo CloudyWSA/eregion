@@ -58,6 +58,25 @@ button:focus-visible { outline: 1px solid var(--eg-accent); outline-offset: 1px;
 }
 .eg-pop[data-place='below'] .eg-notch { top: -4px; }
 .eg-pop[data-place='above'] .eg-notch { bottom: -4px; }
+/* arrastou = janela livre: o notch (que apontava o componente) some */
+.eg-pop[data-detached] .eg-notch { display: none; }
+.eg-drag { cursor: grab; user-select: none; }
+.eg-drag:active { cursor: grabbing; }
+.eg-resize {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 14px;
+  height: 14px;
+  cursor: nwse-resize;
+  /* três traços diagonais discretos */
+  background:
+    linear-gradient(135deg, transparent 6px, var(--eg-line) 6px, var(--eg-line) 7px, transparent 7px),
+    linear-gradient(135deg, transparent 9px, var(--eg-line) 9px, var(--eg-line) 10px, transparent 10px);
+}
+.eg-pop[data-sized] { display: flex; flex-direction: column; }
+.eg-pop[data-sized] .eg-job { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.eg-pop[data-sized] .eg-job-body { max-height: none; flex: 1; min-height: 0; }
 
 /* ---- estado prompt ---- */
 .eg-ask { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; }

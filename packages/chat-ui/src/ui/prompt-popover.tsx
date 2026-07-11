@@ -37,7 +37,7 @@ export function PromptPopover({ selected, models, selectedModel, onModelChange, 
   return (
     <Anchored anchor={anchor} estimatedHeight={86}>
       <div class="eg-ask">
-        <div class="eg-ask-row">
+        <div class="eg-ask-row eg-drag">
           <span class="eg-chips">
             {selected.map((s, i) => (
               <span key={i} class="eg-chip">{s.name}</span>
