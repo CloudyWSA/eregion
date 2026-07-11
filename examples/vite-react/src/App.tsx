@@ -1,43 +1,38 @@
-import { Fragment } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { Header } from './components/Header';
 import { CarCard } from './components/CarCard';
 import { Sidebar } from './components/Sidebar';
 import { FacebookAd } from './components/FacebookAd';
 
-const cars = [
-  {
-    id: 'ABC-1234',
-    model: 'Fiat Uno',
-    price: '$6,500.00',
-    year: '2015/2016',
-    km: '78,400 km',
-    transmission: 'Manual',
-    fuel: 'Flex',
-    color: 'Silver',
-  },
-  {
-    id: 'XYZ-5678',
-    model: 'VW Gol',
-    price: '$9,200.00',
-    year: '2018/2019',
-    km: '52,100 km',
-    transmission: 'Manual',
-    fuel: 'Flex',
-    color: 'White',
-  },
-  {
-    id: 'JKL-9012',
-    model: 'Chevrolet Onix',
-    price: '$15,600.00',
-    year: '2022/2023',
-    km: '18,900 km',
-    transmission: 'Automatic',
-    fuel: 'Flex',
-    color: 'Black',
-  },
-];
+interface Order {
+  id: string;
+  customer: string;
+  total: number;
+}
+
+function orderToCar(o: Order) {
+  return {
+    id: o.id,
+    model: o.customer,
+    price: o.total.toLocaleString('en-US', { style: 'currency', currency: 'USD' }),
+    year: '—',
+    km: '—',
+    transmission: '—',
+    fuel: '—',
+    color: '—',
+  };
+}
 
 export function App() {
+  const [cars, setCars] = useState<ReturnType<typeof orderToCar>[]>([]);
+
+  useEffect(() => {
+    fetch('http://localhost:3199/api/orders')
+      .then((r) => r.json())
+      .then((orders: Order[]) => setCars(orders.map(orderToCar)))
+      .catch(() => setCars([]));
+  }, []);
+
   return (
     <main
       style={{

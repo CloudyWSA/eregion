@@ -10,8 +10,16 @@ init();
 const tracer = trace.getTracer('example-api');
 
 const ORDERS = [
-  { id: 'O-201', customer: 'ACME Ltd', total: 1250.0 },
-  { id: 'O-202', customer: 'Wayne S.A.', total: 380.0 },
+  { id: 'O-201', customer: 'ACME Ltd', total: 1250.0, status: 'open', createdAt: '2026-07-08' },
+  { id: 'O-202', customer: 'Wayne S.A.', total: 380.0, status: 'open', createdAt: '2026-07-09' },
+  { id: 'O-203', customer: 'Stark Corp', total: 9999.0, status: 'shipped', createdAt: '2026-07-05' },
+  { id: 'O-204', customer: 'Umbrella Inc', total: 214.9, status: 'open', createdAt: '2026-07-10' },
+  { id: 'O-205', customer: 'Aperture Labs', total: 4780.5, status: 'cancelled', createdAt: '2026-07-02' },
+  { id: 'O-206', customer: 'Tyrell Corp', total: 1520.0, status: 'open', createdAt: '2026-07-10' },
+  { id: 'O-207', customer: 'Initech', total: 89.9, status: 'shipped', createdAt: '2026-06-30' },
+  { id: 'O-208', customer: 'Hooli', total: 12750.0, status: 'open', createdAt: '2026-07-11' },
+  { id: 'O-209', customer: 'Globex', total: 640.0, status: 'open', createdAt: '2026-07-07' },
+  { id: 'O-210', customer: 'Soylent Co', total: 3305.75, status: 'shipped', createdAt: '2026-07-06' },
 ];
 
 function fakeQuery(statement, rows) {
@@ -40,7 +48,8 @@ const server = createServer(async (req, res) => {
     res.end();
     return;
   }
-  if (req.url === '/api/orders') {
+  if (req.url?.startsWith('/api/orders')) {
+    const status = new URL(req.url, 'http://localhost').searchParams.get('status') ?? 'open';
     const parentCtx = propagation.extract(context.active(), req.headers, headerGetter);
     const span = tracer.startSpan(
       `${req.method} ${req.url}`,
@@ -48,7 +57,10 @@ const server = createServer(async (req, res) => {
       parentCtx,
     );
     const rows = await context.with(trace.setSpan(parentCtx, span), () =>
-      fakeQuery("SELECT id, customer, total FROM orders WHERE status = 'open' LIMIT 50", ORDERS),
+      fakeQuery(
+        `SELECT id, customer, total, status, created_at FROM orders WHERE status = '${status}' ORDER BY created_at DESC LIMIT 50`,
+        ORDERS.filter((o) => o.status === status),
+      ),
     );
     span.setAttribute('http.status_code', 200);
     span.end();
