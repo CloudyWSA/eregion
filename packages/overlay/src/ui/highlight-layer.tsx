@@ -8,7 +8,7 @@ interface Props {
 
 interface Box {
   rect: DOMRect;
-  kind: 'hover' | 'selected' | 'kin';
+  kind: 'hover' | 'selected' | 'kin' | 'area';
   label?: string;
 }
 
@@ -20,11 +20,26 @@ function labelFor(hit: ComponentHit, kinCount: number): string {
 }
 
 function collectBoxes(state: EngineState): Box[] {
-  const boxes: Box[] = state.selected.map((hit) => ({
+  const boxes: Box[] = [];
+  if (state.marquee) {
+    boxes.push({ rect: state.marquee, kind: 'area' });
+  } else if (state.area) {
+    boxes.push({
+      rect: new DOMRect(
+        state.area.pageX - window.scrollX,
+        state.area.pageY - window.scrollY,
+        state.area.width,
+        state.area.height,
+      ),
+      kind: 'area',
+      label: state.area.container ? `dentro de ${state.area.container.name}` : 'área livre',
+    });
+  }
+  boxes.push(...state.selected.map((hit): Box => ({
     rect: hit.element.getBoundingClientRect(),
     kind: 'selected' as const,
     label: labelFor(hit, 0),
-  }));
+  })));
   if (state.hover && !state.selected.some((s) => s.element === state.hover!.element)) {
     for (const el of state.hoverKin) {
       boxes.push({ rect: el.getBoundingClientRect(), kind: 'kin' });

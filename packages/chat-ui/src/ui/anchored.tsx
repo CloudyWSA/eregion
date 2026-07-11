@@ -33,7 +33,7 @@ export function computePosition(
   return { top: Math.max(8, rect.top - GAP - popHeight), left, place: 'above' };
 }
 
-function useAnchor(el: Element, height: number, width: number, frozen: boolean): AnchorPos {
+function useAnchor(el: AnchorTarget, height: number, width: number, frozen: boolean): AnchorPos {
   const rect = () => {
     const r = el.isConnected ? el.getBoundingClientRect() : null;
     return r && (r.width > 0 || r.height > 0) ? r : null;
@@ -64,8 +64,10 @@ function useAnchor(el: Element, height: number, width: number, frozen: boolean):
   return computePosition(last, height, width, { w: window.innerWidth, h: window.innerHeight });
 }
 
+export type AnchorTarget = Element | { getBoundingClientRect(): DOMRect; isConnected: boolean };
+
 interface Props {
-  anchor: Element;
+  anchor: AnchorTarget;
   /** Altura estimada para decidir acima/abaixo (o conteúdo rola internamente). */
   estimatedHeight?: number;
   children: ComponentChildren;

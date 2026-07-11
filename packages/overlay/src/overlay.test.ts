@@ -113,6 +113,42 @@ describe('SelectionEngine', () => {
     expect(state.hoverKin.map((e) => e.id).sort()).toEqual(['c1', 'c3']);
   });
 
+  it('marquee: área pega afetados por interseção e o container por contenção', () => {
+    document.body.innerHTML = `
+      <main id="raiz">
+        <article id="c1">a</article>
+        <article id="c2">b</article>
+      </main>`;
+    setTag(document.getElementById('raiz')!, 'src/App.tsx', 3, 1);
+    setTag(document.getElementById('c1')!, 'src/Card.tsx', 9, 5);
+    setTag(document.getElementById('c2')!, 'src/Card.tsx', 9, 5);
+    const rects: Record<string, DOMRect> = {
+      raiz: new DOMRect(0, 0, 800, 600),
+      c1: new DOMRect(20, 20, 200, 80),
+      c2: new DOMRect(20, 120, 200, 80),
+    };
+    for (const [id, rect] of Object.entries(rects)) {
+      (document.getElementById(id) as HTMLElement).getBoundingClientRect = () => rect;
+    }
+    const engine = new SelectionEngine();
+    mockPoint(document.getElementById('raiz')!);
+    engine.enable();
+
+    document.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, clientX: 10, clientY: 10, button: 0 }));
+    document.dispatchEvent(new MouseEvent('pointermove', { bubbles: true, clientX: 300, clientY: 90 }));
+    expect(engine.getState().marquee).not.toBeNull();
+    document.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, clientX: 300, clientY: 90 }));
+
+    const state = engine.getState();
+    expect(state.marquee).toBeNull();
+    expect(state.selected.map((s) => s.element.id)).toEqual(['c1']);
+    expect(state.area).toMatchObject({ width: 290, height: 80, container: { name: 'App' } });
+
+    const payload = engine.buildPayload({ framework: 'react' });
+    expect(payload.area).toMatchObject({ container: { name: 'App', src: { file: 'src/App.tsx', line: 3 } } });
+    expect(payload.app.components).toContainEqual({ name: 'Card', src: { file: 'src/Card.tsx', line: 9, column: 5 }, count: 2 });
+  });
+
   it('cursor sobre a UI do Eregion não gera hit (não seleciona o que está atrás)', () => {
     const overlayEl = document.createElement('eregion-chat');
     document.body.appendChild(overlayEl);

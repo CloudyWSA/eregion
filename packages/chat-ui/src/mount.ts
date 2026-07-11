@@ -1,5 +1,6 @@
 import { h, render, Fragment } from 'preact';
-import type { EngineState, EregionDevtoolsElement } from '@eregion/overlay';
+import { areaAnchor, type EngineState, type EregionDevtoolsElement } from '@eregion/overlay';
+import type { AnchorTarget } from './ui/anchored.js';
 import { JobStore, type Job } from './store.js';
 import { JobPopover } from './ui/job-popover.js';
 import { PromptPopover } from './ui/prompt-popover.js';
@@ -9,7 +10,7 @@ import { CHAT_CSS } from './ui/styles.js';
 export const CHAT_TAG = 'eregion-chat';
 
 interface JobAnchor {
-  anchor: Element;
+  anchor: AnchorTarget;
   open: boolean;
 }
 
@@ -41,16 +42,21 @@ export function mountChat(overlay: EregionDevtoolsElement): HTMLElement | null {
   const anchors = new Map<string, JobAnchor>();
 
   const dispatch = (prompt: string): void => {
-    const selected = overlay.engine.getState().selected;
-    const anchor = selected[selected.length - 1]?.element;
-    const targets = selected.map((s) => s.name);
+    const { selected, area } = overlay.engine.getState();
+    const anchor: AnchorTarget | undefined = area
+      ? areaAnchor(area)
+      : selected[selected.length - 1]?.element;
+    const targets = [
+      ...(area ? [area.container ? `área em ${area.container.name}` : 'área livre'] : []),
+      ...selected.map((s) => s.name),
+    ];
     const job = store.dispatch(prompt, targets.length > 0 ? targets : ['app']);
     if (anchor) anchors.set(job.jobId, { anchor, open: true });
     client?.send({
       type: 'chat.send',
       payload: {
         text: prompt,
-        attachSelection: targets.length > 0,
+        attachSelection: true,
         jobId: job.jobId,
         ...(job.model ? { model: job.model } : {}),
       },
@@ -73,7 +79,7 @@ export function mountChat(overlay: EregionDevtoolsElement): HTMLElement | null {
   };
 
   const rerender = (ui = store.getState(), engine: EngineState = overlay.engine.getState()) => {
-    const anchored: Array<{ job: Job; anchor: Element }> = [];
+    const anchored: Array<{ job: Job; anchor: AnchorTarget }> = [];
     const trayJobs: Job[] = [];
     for (const job of ui.jobs) {
       const entry = anchors.get(job.jobId);
@@ -87,6 +93,7 @@ export function mountChat(overlay: EregionDevtoolsElement): HTMLElement | null {
         h(PromptPopover, {
           key: 'ask',
           selected: engine.selected,
+          area: engine.area,
           models: ui.models,
           selectedModel: ui.selectedModel,
           onModelChange: (id: string) => store.setSelectedModel(id),

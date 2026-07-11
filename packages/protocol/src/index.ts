@@ -7,6 +7,8 @@ export {
   HttpActivity,
   SelectedComponent,
   SelectionPayload,
+  AreaSelection,
+  PageComponent,
 } from './selection-payload.js';
 export {
   ClientMessage,

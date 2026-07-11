@@ -82,6 +82,7 @@ button:focus-visible { outline: 1px solid var(--eg-accent); outline-offset: 1px;
 .eg-ask { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; }
 .eg-ask-row { display: flex; align-items: center; gap: 6px; }
 .eg-chips { display: flex; gap: 4px; flex-wrap: wrap; flex: 1; min-width: 0; }
+.eg-chip-area { border-style: dashed; }
 .eg-chip {
   color: var(--eg-accent);
   border: 1px solid var(--eg-accent-soft);

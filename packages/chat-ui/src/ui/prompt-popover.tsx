@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import type { ComponentHit } from '@eregion/overlay';
+import { areaAnchor, type AreaState, type ComponentHit } from '@eregion/overlay';
 import type { ModelOption } from '@eregion/protocol';
 import { Anchored } from './anchored.js';
 
 interface Props {
   selected: ComponentHit[];
+  area: AreaState | null;
   models: ModelOption[];
   selectedModel: string;
   onModelChange(id: string): void;
@@ -16,14 +17,14 @@ interface Props {
  * Enter — vira job no mesmo lugar. Shift+clique soma componentes; a caixa
  * segue o último clicado e mostra todos como chips.
  */
-export function PromptPopover({ selected, models, selectedModel, onModelChange, onDispatch }: Props) {
+export function PromptPopover({ selected, area, models, selectedModel, onModelChange, onDispatch }: Props) {
   const [prompt, setPrompt] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
-  const anchor = selected[selected.length - 1]?.element;
+  const anchor = area ? areaAnchor(area) : selected[selected.length - 1]?.element;
 
   useEffect(() => {
     if (anchor) inputRef.current?.focus();
-  }, [anchor]);
+  }, [anchor === undefined]);
 
   if (!anchor) return null;
 
@@ -39,6 +40,11 @@ export function PromptPopover({ selected, models, selectedModel, onModelChange, 
       <div class="eg-ask">
         <div class="eg-ask-row eg-drag">
           <span class="eg-chips">
+            {area && (
+              <span class="eg-chip eg-chip-area">
+                ▧ área{area.container ? ` em ${area.container.name}` : ''}
+              </span>
+            )}
             {selected.map((s, i) => (
               <span key={i} class="eg-chip">{s.name}</span>
             ))}
@@ -62,7 +68,15 @@ export function PromptPopover({ selected, models, selectedModel, onModelChange, 
           ref={inputRef}
           class="eg-ask-input"
           value={prompt}
-          placeholder={selected.length === 1 ? `O que mudar em ${selected[0]!.name}?` : `O que mudar nestes ${selected.length}?`}
+          placeholder={
+            area
+              ? selected.length > 0
+                ? `O que fazer nesta área (${selected.length} componente(s) dentro)?`
+                : 'O que criar nesta área?'
+              : selected.length === 1
+                ? `O que mudar em ${selected[0]!.name}?`
+                : `O que mudar nestes ${selected.length}?`
+          }
           onInput={(e) => setPrompt((e.target as HTMLInputElement).value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter') send();

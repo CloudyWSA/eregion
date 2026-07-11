@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'preact/hooks';
 import type { Job, JobEvent, JobStatus } from '../store.js';
-import { Anchored } from './anchored.js';
+import { Anchored, type AnchorTarget } from './anchored.js';
 import { Markdown } from './markdown.js';
 
 const STATUS_VERB: Record<JobStatus, string> = {
@@ -68,7 +68,7 @@ function Step({ ev, onRevert }: { ev: JobEvent; onRevert(id: string): void }) {
 
 interface Props {
   job: Job;
-  anchor: Element;
+  anchor: AnchorTarget;
   onClose(): void;
   onRevert(id: string): void;
 }

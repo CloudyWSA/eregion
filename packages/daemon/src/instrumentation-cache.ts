@@ -26,11 +26,21 @@ export class InstrumentationCache {
    */
   compactRefs(): string[] {
     if (!this.selection) return [];
-    return this.selection.selection.map((c) => {
+    const refs: string[] = [];
+    const area = this.selection.area;
+    if (area) {
+      const [, , w, h] = area.rect;
+      const where = area.container
+        ? `inside ${area.container.name} — ${area.container.src.file}:${area.container.src.line} (insertion point)`
+        : 'free space on the page';
+      refs.push(`<area selected: ${Math.round(w)}x${Math.round(h)}px, ${where}>`);
+    }
+    refs.push(...this.selection.selection.map((c) => {
       const ref = c.src ?? c.tpl;
       const where = ref ? ` — ${ref.file}:${ref.line}` : '';
       const http = c.http?.length ? `, ${c.http.length} request(s)` : '';
       return `<selecionado ${c.id}: ${c.name}${where}${http}>`;
-    });
+    }));
+    return refs;
   }
 }

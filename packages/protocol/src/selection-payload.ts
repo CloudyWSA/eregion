@@ -55,13 +55,38 @@ export const SelectedComponent = z.object({
 });
 export type SelectedComponent = z.infer<typeof SelectedComponent>;
 
+/**
+ * Área desenhada pelo dev (marquee): pode cobrir componentes (adaptá-los) ou
+ * espaço vazio (criar algo ali). O container é o elemento tagueado mais
+ * interno que contém a área inteira — o ponto de inserção no código.
+ */
+export const AreaSelection = z.object({
+  /** [x, y, largura, altura] na viewport no momento da captura */
+  rect: z.tuple([z.number(), z.number(), z.number(), z.number()]),
+  container: z
+    .object({ name: z.string(), src: SourceRef })
+    .optional(),
+});
+export type AreaSelection = z.infer<typeof AreaSelection>;
+
+/** Componente presente na página (inventário compacto p/ contexto lazy). */
+export const PageComponent = z.object({
+  name: z.string(),
+  src: SourceRef,
+  count: z.number().int().min(1),
+});
+export type PageComponent = z.infer<typeof PageComponent>;
+
 export const SelectionPayload = z.object({
   v: z.literal(PROTOCOL_VERSION),
   app: z.object({
     framework: z.string(),
     name: z.string().optional(),
     route: z.string().optional(),
+    /** Componentes únicos renderizados na página corrente, com contagem. */
+    components: z.array(PageComponent).optional(),
   }),
   selection: z.array(SelectedComponent),
+  area: AreaSelection.optional(),
 });
 export type SelectionPayload = z.infer<typeof SelectionPayload>;
