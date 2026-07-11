@@ -1,6 +1,8 @@
+import { Fragment } from 'react';
 import { Header } from './components/Header';
 import { CarCard } from './components/CarCard';
 import { Sidebar } from './components/Sidebar';
+import { FacebookAd } from './components/FacebookAd';
 
 const cars = [
   {
@@ -52,9 +54,12 @@ export function App() {
       <Header title="AutoElite Motors" />
       <div style={{ display: 'flex', gap: 16, alignItems: 'stretch', flex: 1 }}>
         <Sidebar />
-        <section style={{ display: 'grid', gap: 12, flex: 1 }}>
-          {cars.map((c) => (
-            <CarCard key={c.id} car={c} />
+        <section style={{ display: 'grid', gap: 12, flex: 1, alignContent: 'start' }}>
+          {cars.map((c, i) => (
+            <Fragment key={c.id}>
+              {i === Math.floor(cars.length / 2) && <FacebookAd />}
+              <CarCard car={c} />
+            </Fragment>
           ))}
         </section>
       </div>

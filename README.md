@@ -117,3 +117,5 @@ cd examples/vite-react && pnpm dev           # sample app (daemon first: node pa
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+The repo ships a mock backend (`examples/api-node`) that fakes a SQL query with real `db.*` span attributes — start it (demo.sh does), fetch `http://localhost:3199/api/orders` from the app, and ask the assistant what query is behind the request.

@@ -282,10 +282,6 @@ export class SelectionEngine {
       this.clear();
       this.disable();
     }
-    if (ev.altKey && ev.code === 'KeyA') {
-      ev.preventDefault();
-      this.state.mode === 'area' ? this.exitAreaMode() : this.enterAreaMode();
-    }
   };
 
   /** Mouse wheel moves up (deltaY < 0) or down the component hierarchy under the cursor. */

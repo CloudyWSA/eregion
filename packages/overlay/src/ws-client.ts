@@ -115,6 +115,7 @@ export interface EregionGlobal {
   daemonPort: number;
   daemonToken: string;
   appName?: string;
+  traceOrigins?: string[];
 }
 
 declare global {

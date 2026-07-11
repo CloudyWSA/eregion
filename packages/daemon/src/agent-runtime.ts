@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import {
   query,
   type McpSdkServerConfigWithInstance,
@@ -115,12 +116,17 @@ export class AgentRuntime {
   }
 
   sendMessage(text: string, model?: string): void {
+    // streaming input has no echo of the dev's message — we mint the uuid
+    // ourselves so rewindFiles has a valid checkpoint to target
+    const uuid = randomUUID();
+    this.lastUserMessageUuid = uuid;
     this.inbox.push({
       type: 'user',
+      uuid,
       message: { role: 'user', content: text },
       parent_tool_use_id: null,
       session_id: this.sessionId ?? '',
-    });
+    } as SDKUserMessage);
     const wanted = model === 'default' ? undefined : model;
     if (!this.queryHandle) {
       // The session starts only with the first message already queued — never before.
@@ -174,8 +180,9 @@ export class AgentRuntime {
         systemPrompt: { type: 'preset', preset: 'claude_code', append: SYSTEM_APPEND },
         mcpServers: { [this.mcpName()]: this.options.mcpServer },
         strictMcpConfig: true,
-        allowedTools: ['Read', 'Edit', 'Write', 'Glob', 'Grep', 'Bash', `mcp__${this.mcpName()}__*`],
-        permissionMode: 'acceptEdits',
+        // No allowedTools: bare entries auto-approve before canUseTool runs,
+        // silently bypassing the permission broker (bash approvals, review mode).
+        permissionMode: 'default',
         canUseTool: this.options.broker.canUseTool,
         includePartialMessages: true,
         enableFileCheckpointing: true,
@@ -234,11 +241,6 @@ export class AgentRuntime {
         return;
       }
       case 'user': {
-        // echo of the dev's message — its uuid is the rewind point for the turn's edits
-        if (!msg.parent_tool_use_id && !msg.isSynthetic && 'uuid' in msg) {
-          this.lastUserMessageUuid = msg.uuid;
-        }
-        // tool_results close the corresponding steps in the job timeline
         const content = msg.message.content;
         if (Array.isArray(content)) {
           for (const block of content) {

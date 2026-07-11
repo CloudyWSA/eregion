@@ -1,0 +1,14 @@
+{
+  "name": "example-api-node",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "dev": "node src/server.mjs"
+  },
+  "dependencies": {
+    "@eregion/node-agent": "workspace:*",
+    "@opentelemetry/api": "^1.9.0"
+  }
+}

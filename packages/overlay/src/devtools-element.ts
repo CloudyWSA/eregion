@@ -27,7 +27,7 @@ export class EregionDevtoolsElement extends HTMLElement {
 
     // Network patch: injects traceparent into the app's requests and feeds the
     // buffer the selection-engine attaches to the payload (frontend → backend trace).
-    installNetworkPatch();
+    installNetworkPatch({ traceOrigins: window.__EREGION__?.traceOrigins });
     this.engine.httpProvider = () => recentHttpActivity();
 
     const daemon = this.options.daemon ?? window.__EREGION__;
@@ -71,6 +71,10 @@ export class EregionDevtoolsElement extends HTMLElement {
     if (ev.altKey && ev.code === 'KeyS') {
       ev.preventDefault();
       this.engine.toggle();
+    }
+    if (ev.altKey && ev.code === 'KeyA') {
+      ev.preventDefault();
+      this.engine.getState().mode === 'area' ? this.engine.exitAreaMode() : this.engine.enterAreaMode();
     }
   };
 }

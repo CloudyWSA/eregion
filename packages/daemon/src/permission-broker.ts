@@ -13,6 +13,7 @@ export interface PermissionRequestEvent {
 interface PendingRequest {
   resolve(result: PermissionResult): void;
   timer: ReturnType<typeof setTimeout>;
+  input: Record<string, unknown>;
 }
 
 const FS_EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
@@ -56,7 +57,7 @@ export class PermissionBroker {
     clearTimeout(req.timer);
     req.resolve(
       allow
-        ? { behavior: 'allow' }
+        ? { behavior: 'allow', updatedInput: req.input }
         : { behavior: 'deny', message: 'Denied by the developer in the overlay.' },
     );
   }
@@ -72,10 +73,10 @@ export class PermissionBroker {
 
   canUseTool: CanUseTool = async (toolName, input, { signal }) => {
     if (ALWAYS_ALLOWED.has(toolName) || toolName.startsWith('mcp__eregion__')) {
-      return { behavior: 'allow' };
+      return { behavior: 'allow', updatedInput: input };
     }
     if (FS_EDIT_TOOLS.has(toolName) && this.mode === 'auto' && this.withinWorkspace(input)) {
-      return { behavior: 'allow' };
+      return { behavior: 'allow', updatedInput: input };
     }
     return this.askOverlay(toolName, input, signal);
   };
@@ -92,7 +93,7 @@ export class PermissionBroker {
         this.pending.delete(requestId);
         resolve({ behavior: 'deny', message: 'Approval timed out (120s) with no response in the overlay.' });
       }, APPROVAL_TIMEOUT_MS);
-      this.pending.set(requestId, { resolve, timer });
+      this.pending.set(requestId, { resolve, timer, input });
       signal.addEventListener('abort', () => {
         clearTimeout(timer);
         this.pending.delete(requestId);

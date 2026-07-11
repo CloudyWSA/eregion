@@ -64,6 +64,7 @@ export function firstAppFrame(stack: string | undefined, repoRoot: string): Sour
     const frame = parseStackFrame(raw);
     if (!frame) continue;
     if (frame.file.includes('node_modules')) continue;
+    if (frame.file.includes('node-agent/dist') || frame.file.includes('node-agent/src')) continue;
     if (!path.isAbsolute(frame.file)) continue;
     const rel = path.relative(repoRoot, frame.file);
     // Outside the repo (starts with ".." or is absolute again) → ignore.

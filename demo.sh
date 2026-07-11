@@ -12,7 +12,9 @@ sleep 1
 
 node packages/daemon/dist/cli.js "$@" &
 DAEMON_PID=$!
-trap 'kill $DAEMON_PID 2>/dev/null' EXIT
+node examples/api-node/src/server.mjs &
+API_PID=$!
+trap 'kill $DAEMON_PID $API_PID 2>/dev/null' EXIT
 
 # give the daemon time to write .eregion/daemon.json before vite reads it
 sleep 2

@@ -12,6 +12,8 @@ export { TAG_ATTR } from '@eregion/protocol';
 export interface BuildOptions extends TagOptions {
   /** App name shown in the daemon/chat; default: no name. */
   appName?: string;
+  /** Cross-origin backends that accept the traceparent header. */
+  traceOrigins?: string[];
 }
 
 /**
@@ -19,10 +21,15 @@ export interface BuildOptions extends TagOptions {
  * config (port + token from .eregion/daemon.json) for the overlay to find.
  * Injects nothing when no daemon is running — the app works normally.
  */
-function daemonConfigScript(appName?: string): string | null {
+function daemonConfigScript(options?: BuildOptions): string | null {
   const info = readDaemonInfo(findRepoRoot(process.cwd()));
   if (!info) return null;
-  const config = { daemonPort: info.port, daemonToken: info.token, appName };
+  const config = {
+    daemonPort: info.port,
+    daemonToken: info.token,
+    appName: options?.appName,
+    traceOrigins: options?.traceOrigins,
+  };
   return `window.__EREGION__ = ${JSON.stringify(config)};`;
 }
 
@@ -48,7 +55,7 @@ export const EregionBuild = createUnplugin<BuildOptions | undefined>((options) =
       };
     },
     transformIndexHtml() {
-      const script = daemonConfigScript(options?.appName);
+      const script = daemonConfigScript(options);
       if (!script) return [];
       return [{ tag: 'script', children: script, injectTo: 'head' as const }];
     },
