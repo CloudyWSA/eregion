@@ -23,6 +23,7 @@ export function OverlayApp({ engine, client }: Props) {
         state={state}
         connection={connection}
         onToggle={() => engine.toggle()}
+        onArea={() => (engine.getState().mode === 'area' ? engine.exitAreaMode() : engine.enterAreaMode())}
         onClear={() => engine.clear()}
       />
     </>

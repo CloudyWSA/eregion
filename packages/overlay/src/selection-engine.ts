@@ -12,8 +12,11 @@ export interface AreaState {
   container: ComponentHit | null;
 }
 
+export type SelectionMode = 'component' | 'area';
+
 export interface EngineState {
   active: boolean;
+  mode: SelectionMode;
   hover: ComponentHit | null;
   /** Other instances of the component under the cursor (same code origin). */
   hoverKin: Element[];
@@ -52,9 +55,18 @@ function isEregionUi(el: Element): boolean {
 }
 
 export class SelectionEngine {
-  private state: EngineState = { active: false, hover: null, hoverKin: [], selected: [], marquee: null, area: null };
+  private state: EngineState = {
+    active: false,
+    mode: 'component',
+    hover: null,
+    hoverKin: [],
+    selected: [],
+    marquee: null,
+    area: null,
+  };
   private dragStart: { x: number; y: number } | null = null;
   private dragging = false;
+  private suppressNextClick = false;
   private listeners = new Set<Listener>();
   private doc: Document;
 
@@ -84,6 +96,17 @@ export class SelectionEngine {
     this.state.active ? this.disable() : this.enable();
   }
 
+  enterAreaMode(): void {
+    if (!this.state.active) this.enable();
+    this.doc.body.style.cursor = 'crosshair';
+    this.emit({ mode: 'area', hover: null, hoverKin: [] });
+  }
+
+  exitAreaMode(): void {
+    this.doc.body.style.cursor = '';
+    if (this.state.mode === 'area') this.emit({ mode: 'component' });
+  }
+
   enable(): void {
     if (this.state.active) return;
     this.doc.addEventListener('pointermove', this.onPointerMove, true);
@@ -103,7 +126,8 @@ export class SelectionEngine {
     this.doc.removeEventListener('click', this.onClick, true);
     this.doc.removeEventListener('keydown', this.onKeyDown, true);
     this.doc.removeEventListener('wheel', this.onWheel, true);
-    this.emit({ active: false, hover: null, hoverKin: [], marquee: null });
+    this.doc.body.style.cursor = '';
+    this.emit({ active: false, mode: 'component', hover: null, hoverKin: [], marquee: null });
   }
 
   clear(): void {
@@ -137,13 +161,14 @@ export class SelectionEngine {
   }
 
   private onPointerMove = (ev: PointerEvent): void => {
-    if (this.dragStart) {
+    if (this.state.mode === 'area') {
+      if (!this.dragStart) return;
       const rect = this.marqueeRect(ev.clientX, ev.clientY);
       if (this.dragging || Math.max(rect.width, rect.height) > DRAG_THRESHOLD_PX) {
         this.dragging = true;
         this.emit({ marquee: rect, hover: null, hoverKin: [] });
-        return;
       }
+      return;
     }
     const els = this.doc.elementsFromPoint(ev.clientX, ev.clientY);
     const top = els[0];
@@ -157,9 +182,10 @@ export class SelectionEngine {
   };
 
   private onPointerDown = (ev: PointerEvent): void => {
-    if (ev.button !== 0) return;
+    if (ev.button !== 0 || this.state.mode !== 'area') return;
     const els = this.doc.elementsFromPoint(ev.clientX, ev.clientY);
     if (els[0] && isEregionUi(els[0])) return;
+    ev.preventDefault();
     this.dragStart = { x: ev.clientX, y: ev.clientY };
     this.dragging = false;
   };
@@ -175,10 +201,12 @@ export class SelectionEngine {
     const rect = this.marqueeRect(ev.clientX, ev.clientY);
     this.dragStart = null;
     this.dragging = false;
-    if (!wasDragging) return; // plain click; onClick handles it
+    this.suppressNextClick = true;
+    if (!wasDragging) return;
     ev.preventDefault();
     ev.stopPropagation();
     this.commitArea(rect);
+    this.exitAreaMode();
   };
 
   /** Releases the marquee: affected = intersection; container = smallest that contains all. */
@@ -224,8 +252,18 @@ export class SelectionEngine {
   }
 
   private onClick = (ev: MouseEvent): void => {
-    // a click that ends an area drag selects nothing
-    if (this.state.area && this.state.selected.length === 0 && ev.detail === 0) return;
+    // browsers fire a click right after the marquee's pointerup — swallow it
+    if (this.suppressNextClick) {
+      this.suppressNextClick = false;
+      ev.preventDefault();
+      ev.stopPropagation();
+      return;
+    }
+    if (this.state.mode === 'area') {
+      ev.preventDefault();
+      ev.stopPropagation();
+      return;
+    }
     const hit = this.hitTest(ev.clientX, ev.clientY);
     if (!hit) return;
     ev.preventDefault();
@@ -236,8 +274,17 @@ export class SelectionEngine {
 
   private onKeyDown = (ev: KeyboardEvent): void => {
     if (ev.key === 'Escape') {
+      if (this.state.mode === 'area') {
+        this.exitAreaMode();
+        this.emit({ marquee: null });
+        return;
+      }
       this.clear();
       this.disable();
+    }
+    if (ev.altKey && ev.code === 'KeyA') {
+      ev.preventDefault();
+      this.state.mode === 'area' ? this.exitAreaMode() : this.enterAreaMode();
     }
   };
 

@@ -23,11 +23,12 @@ export function CarCard({ car }: { car: Car }) {
     <article
       style={{
         background: '#fff',
-        border: '1px solid #b3b3b3',
-        borderRadius: 3,
-        fontFamily: '"lucida grande", tahoma, verdana, arial, sans-serif',
-        fontSize: 11,
-        color: '#333',
+        border: '1px solid #dddfe2',
+        borderRadius: 8,
+        boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+        fontFamily:
+          'system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif',
+        color: '#050505',
         overflow: 'hidden',
       }}
     >
@@ -37,37 +38,44 @@ export function CarCard({ car }: { car: Car }) {
           alignItems: 'center',
           justifyContent: 'space-between',
           gap: 12,
-          background: '#3b5998',
-          color: '#fff',
-          padding: '4px 8px',
-          fontSize: 11,
-          fontWeight: 'bold',
+          padding: '12px 16px',
         }}
       >
-        <span>{car.model}</span>
-        <span>{car.price}</span>
+        <span style={{ fontSize: 17, fontWeight: 600, letterSpacing: -0.2 }}>
+          {car.model}
+        </span>
+        <span
+          style={{
+            fontSize: 13,
+            fontWeight: 600,
+            color: '#1877f2',
+            background: '#e7f3ff',
+            padding: '4px 12px',
+            borderRadius: 999,
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {car.price}
+        </span>
       </div>
-      <table style={{ width: '100%', borderCollapse: 'collapse', background: '#f7f7f7' }}>
-        <tbody>
-          {labels.map(({ field, label }) => (
-            <tr key={field} style={{ borderTop: '1px solid #eee' }}>
-              <td
-                style={{
-                  padding: '4px 8px',
-                  color: '#666',
-                  fontWeight: 'bold',
-                  width: 90,
-                  verticalAlign: 'top',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {label}
-              </td>
-              <td style={{ padding: '4px 8px', color: '#333' }}>{car[field]}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(2, 1fr)',
+          gap: 1,
+          background: '#f0f2f5',
+          borderTop: '1px solid #f0f2f5',
+        }}
+      >
+        {labels.map(({ field, label }) => (
+          <div key={field} style={{ background: '#fff', padding: '10px 16px' }}>
+            <div style={{ fontSize: 12, color: '#65676b', marginBottom: 2 }}>{label}</div>
+            <div style={{ fontSize: 14, fontWeight: 500, color: '#050505' }}>
+              {car[field]}
+            </div>
+          </div>
+        ))}
+      </div>
     </article>
   );
 }

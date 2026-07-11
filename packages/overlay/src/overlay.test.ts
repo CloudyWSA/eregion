@@ -133,6 +133,7 @@ describe('SelectionEngine', () => {
     const engine = new SelectionEngine();
     mockPoint(document.getElementById('root')!);
     engine.enable();
+    engine.enterAreaMode();
 
     document.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, clientX: 10, clientY: 10, button: 0 }));
     document.dispatchEvent(new MouseEvent('pointermove', { bubbles: true, clientX: 300, clientY: 90 }));
@@ -141,8 +142,15 @@ describe('SelectionEngine', () => {
 
     const state = engine.getState();
     expect(state.marquee).toBeNull();
+    expect(state.mode).toBe('component');
     expect(state.selected.map((s) => s.element.id)).toEqual(['c1']);
     expect(state.area).toMatchObject({ width: 290, height: 80, container: { name: 'App' } });
+
+    const ghost = new MouseEvent('click', { bubbles: true, cancelable: true, clientX: 300, clientY: 90 });
+    document.getElementById('c1')!.dispatchEvent(ghost);
+    expect(ghost.defaultPrevented).toBe(true);
+    expect(engine.getState().area).not.toBeNull();
+    expect(engine.getState().selected.map((s) => s.element.id)).toEqual(['c1']);
 
     const payload = engine.buildPayload({ framework: 'react' });
     expect(payload.area).toMatchObject({ container: { name: 'App', src: { file: 'src/App.tsx', line: 3 } } });
