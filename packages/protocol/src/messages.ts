@@ -28,6 +28,8 @@ export const ClientMessage = z.discriminatedUnion('type', [
       jobId: z.string().optional(),
       /** ModelOption id; absent = the dev account's default model. */
       model: z.string().optional(),
+      /** jobId of the turn being replied to — routes to the same session. */
+      replyTo: z.string().optional(),
     }),
   }),
   z.object({ type: z.literal('chat.cancel'), payload: z.object({ jobId: z.string().optional() }) }),

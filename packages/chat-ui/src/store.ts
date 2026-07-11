@@ -13,6 +13,8 @@ export interface JobEvent {
 
 export interface Job {
   id: number;
+  /** Thread root: replies share the first turn's rootId. */
+  rootId: string;
   /** Correlates with daemon events (parallel session pool). */
   jobId: string;
   /** Dispatch epoch — feeds the card's live timer. */
@@ -97,15 +99,17 @@ export class JobStore {
     this.emit({ selectedModel: id });
   }
 
-  dispatch(prompt: string, targets: string[]): Job {
+  dispatch(prompt: string, targets: string[], opts: { rootId?: string } = {}): Job {
     const id = this.nextJobId++;
     const chosen =
       this.state.selectedModel !== 'default'
         ? this.state.models.find((m) => m.id === this.state.selectedModel)
         : undefined;
+    const jobId = typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `job-${id}`;
     const job: Job = {
       id,
-      jobId: typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `job-${id}`,
+      jobId,
+      rootId: opts.rootId ?? jobId,
       prompt,
       targets,
       status: 'queued',

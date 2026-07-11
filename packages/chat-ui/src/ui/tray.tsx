@@ -5,7 +5,7 @@ export function JobTray({ jobs, onOpen }: { jobs: Job[]; onOpen(jobId: string): 
   return (
     <div class="eg-tray">
       {jobs.map((job) => (
-        <button key={job.jobId} class="eg-tray-pill" onClick={() => onOpen(job.jobId)}>
+        <button key={job.rootId} class="eg-tray-pill" onClick={() => onOpen(job.rootId)}>
           <span class={`eg-dot ${job.status}`} />
           <span class="eg-tray-prompt">{job.prompt}</span>
         </button>

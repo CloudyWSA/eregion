@@ -1,3 +1,4 @@
+import { Fragment } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import type { Job, JobEvent, JobStatus } from '../store.js';
 import { Anchored, type AnchorTarget } from './anchored.js';
@@ -67,43 +68,71 @@ function Step({ ev, onRevert }: { ev: JobEvent; onRevert(id: string): void }) {
 }
 
 interface Props {
-  job: Job;
+  thread: Job[];
   anchor: AnchorTarget;
   onClose(): void;
   onRevert(id: string): void;
+  onReply(text: string): void;
 }
 
-export function JobPopover({ job, anchor, onClose, onRevert }: Props) {
-  const elapsed = useElapsed(job);
+export function JobPopover({ thread, anchor, onClose, onRevert, onReply }: Props) {
+  const first = thread[0]!;
+  const last = thread[thread.length - 1]!;
+  const elapsed = useElapsed(last);
+  const [reply, setReply] = useState('');
+  const busy = last.status === 'running' || last.status === 'queued';
+
+  const sendReply = () => {
+    const text = reply.trim();
+    if (!text) return;
+    setReply('');
+    onReply(text);
+  };
+
   return (
     <Anchored anchor={anchor} estimatedHeight={220}>
       <div class="eg-job">
         <header class="eg-job-head eg-drag">
-          <span class={`eg-dot ${job.status}`} />
-          <span class="eg-job-title">{job.prompt}</span>
+          <span class={`eg-dot ${last.status}`} />
+          <span class="eg-job-title">{first.prompt}</span>
           <span class="eg-job-meta">
-            {job.modelName ? `${job.modelName} · ` : ''}{STATUS_VERB[job.status]} · {elapsed}
+            {last.modelName ? `${last.modelName} · ` : ''}{STATUS_VERB[last.status]} · {elapsed}
           </span>
           <button class="eg-x" onClick={onClose} title="Close (the request keeps running)">✕</button>
         </header>
-        {(job.events.length > 0 || job.answer) && (
-          <div class="eg-job-body">
-            {job.events.length > 0 && (
-              <div class="eg-steps">
-                {job.events.map((ev, i) => (
-                  <Step key={i} ev={ev} onRevert={onRevert} />
-                ))}
-              </div>
-            )}
-            {job.answer && <Markdown text={job.answer} />}
-          </div>
-        )}
-        {job.usage && (
-          <footer class="eg-foot">
-            <span>{job.usage.outputTokens} tok · {((job.durationMs ?? 0) / 1000).toFixed(1)}s</span>
-            {job.usage.costUsd !== undefined && <span>${job.usage.costUsd.toFixed(3)}</span>}
-          </footer>
-        )}
+        <div class="eg-job-body">
+          {thread.map((turn, ti) => (
+            <Fragment key={turn.jobId}>
+              {ti > 0 && <div class="eg-turn-prompt">{turn.prompt}</div>}
+              {turn.events.length > 0 && (
+                <div class="eg-steps">
+                  {turn.events.map((ev, i) => (
+                    <Step key={i} ev={ev} onRevert={onRevert} />
+                  ))}
+                </div>
+              )}
+              {turn.answer && <Markdown text={turn.answer} />}
+            </Fragment>
+          ))}
+        </div>
+        <footer class="eg-foot">
+          <input
+            class="eg-reply"
+            value={reply}
+            placeholder={busy ? 'Reply (queues on this session)…' : 'Reply…'}
+            onInput={(e) => setReply((e.target as HTMLInputElement).value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') sendReply();
+              e.stopPropagation();
+            }}
+          />
+          {last.usage && (
+            <span class="eg-foot-metrics">
+              {last.usage.outputTokens} tok
+              {last.usage.costUsd !== undefined && ` · $${last.usage.costUsd.toFixed(3)}`}
+            </span>
+          )}
+        </footer>
       </div>
     </Anchored>
   );

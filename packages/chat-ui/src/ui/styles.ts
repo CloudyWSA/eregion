@@ -192,10 +192,32 @@ button:focus-visible { outline: 1px solid var(--eg-accent); outline-offset: 1px;
 .eg-revert:hover { text-decoration: underline; }
 .eg-foot {
   display: flex;
-  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
   color: var(--eg-muted);
   border-top: 1px solid var(--eg-line);
-  padding: 5px 10px;
+  padding: 6px 10px;
+}
+.eg-reply {
+  flex: 1;
+  min-width: 0;
+  background: var(--eg-srf-2);
+  border: 1px solid transparent;
+  border-radius: 3px;
+  padding: 4px 8px;
+  font: var(--eg-prose);
+  color: var(--eg-ink);
+  outline: none;
+}
+.eg-reply:focus { border-color: var(--eg-accent); background: var(--eg-srf); }
+.eg-foot-metrics { white-space: nowrap; }
+.eg-turn-prompt {
+  color: var(--eg-ink);
+  background: var(--eg-srf-2);
+  border-radius: 3px;
+  padding: 4px 8px;
+  align-self: flex-end;
+  max-width: 90%;
 }
 
 /* ---- answer markdown (prose in sans, rest mono) ---- */

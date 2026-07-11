@@ -4,6 +4,15 @@ import { JobStore } from './store.js';
 const usage = { inputTokens: 10, outputTokens: 200, cacheReadTokens: 28000, costUsd: 0.02 };
 
 describe('JobStore', () => {
+  it('replies share the thread rootId', () => {
+    const store = new JobStore();
+    const root = store.dispatch('make it blue', ['Header']);
+    const turn = store.dispatch('darker please', ['Header'], { rootId: root.rootId });
+    expect(root.rootId).toBe(root.jobId);
+    expect(turn.rootId).toBe(root.rootId);
+    expect(turn.jobId).not.toBe(root.jobId);
+  });
+
   it('dispatch creates a running job; deltas and result close the job', () => {
     const store = new JobStore();
     store.dispatch('make the button green', ['Header']);

@@ -45,7 +45,7 @@ export function mountChat(overlay: EregionDevtoolsElement): HTMLElement | null {
       ...selected.map((s) => s.name),
     ];
     const job = store.dispatch(prompt, targets.length > 0 ? targets : ['app']);
-    if (anchor) anchors.set(job.jobId, { anchor, open: true });
+    if (anchor) anchors.set(job.rootId, { anchor, open: true });
     client?.send({
       type: 'chat.send',
       payload: {
@@ -57,6 +57,15 @@ export function mountChat(overlay: EregionDevtoolsElement): HTMLElement | null {
     });
     overlay.engine.clear();
     rerender();
+  };
+
+  const reply = (thread: Job[], text: string): void => {
+    const lastTurn = thread[thread.length - 1]!;
+    const turn = store.dispatch(text, lastTurn.targets, { rootId: lastTurn.rootId });
+    client?.send({
+      type: 'chat.send',
+      payload: { text, attachSelection: false, jobId: turn.jobId, replyTo: lastTurn.jobId },
+    });
   };
 
   const setOpen = (jobId: string, open: boolean): void => {
@@ -72,13 +81,20 @@ export function mountChat(overlay: EregionDevtoolsElement): HTMLElement | null {
   };
 
   const rerender = (ui = store.getState(), engine: EngineState = overlay.engine.getState()) => {
-    const anchored: Array<{ job: Job; anchor: AnchorTarget }> = [];
-    const trayJobs: Job[] = [];
+    const threads = new Map<string, Job[]>();
     for (const job of ui.jobs) {
-      const entry = anchors.get(job.jobId);
+      const list = threads.get(job.rootId);
+      if (list) list.push(job);
+      else threads.set(job.rootId, [job]);
+    }
+    const anchored: Array<{ thread: Job[]; anchor: AnchorTarget }> = [];
+    const trayJobs: Job[] = [];
+    for (const [rootId, thread] of threads) {
+      const entry = anchors.get(rootId);
       if (!entry) continue;
-      if (entry.open) anchored.push({ job, anchor: entry.anchor });
-      else if (job.status === 'queued' || job.status === 'running') trayJobs.push(job);
+      const last = thread[thread.length - 1]!;
+      if (entry.open) anchored.push({ thread, anchor: entry.anchor });
+      else if (last.status === 'queued' || last.status === 'running') trayJobs.push(thread[0]!);
     }
 
     render(
@@ -92,13 +108,14 @@ export function mountChat(overlay: EregionDevtoolsElement): HTMLElement | null {
           onModelChange: (id: string) => store.setSelectedModel(id),
           onDispatch: dispatch,
         }),
-        ...anchored.map(({ job, anchor }) =>
+        ...anchored.map(({ thread, anchor }) =>
           h(JobPopover, {
-            key: job.jobId,
-            job,
+            key: thread[0]!.rootId,
+            thread,
             anchor,
-            onClose: () => setOpen(job.jobId, false),
+            onClose: () => setOpen(thread[0]!.rootId, false),
             onRevert,
+            onReply: (text: string) => reply(thread, text),
           }),
         ),
         h(JobTray, { key: 'tray', jobs: trayJobs, onOpen: (id: string) => setOpen(id, true) }),

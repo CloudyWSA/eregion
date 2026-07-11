@@ -40,6 +40,24 @@ function makePool(size: number) {
 }
 
 describe('RuntimePool', () => {
+  it('reply pinned to a busy slot waits for that slot even with others idle', () => {
+    const { pool, runtimes } = makePool(2);
+    pool.dispatch({ jobId: 'a', text: 'first' });
+    expect(pool.slotOf('a')).toBe(0);
+
+    pool.dispatch({ jobId: 'a2', text: 'reply', requiredSlot: pool.slotOf('a') });
+    expect(pool.pendingCount).toBe(1);
+    expect(runtimes).toHaveLength(1);
+
+    pool.dispatch({ jobId: 'b', text: 'other' });
+    expect(runtimes).toHaveLength(2);
+    expect(runtimes[1]!.sent).toEqual(['other']);
+
+    runtimes[0]!.finishTurn();
+    expect(runtimes[0]!.sent).toEqual(['first', 'reply']);
+    expect(pool.pendingCount).toBe(0);
+  });
+
   it('runs up to `size` jobs in parallel and queues the overflow', () => {
     const { pool, runtimes } = makePool(2);
     pool.dispatch({ jobId: 'a', text: 'job a' });

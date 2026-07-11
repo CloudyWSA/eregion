@@ -4,6 +4,8 @@ import type { AgentRuntime, RuntimeEvents } from './agent-runtime.js';
 export interface PoolJob {
   jobId: string;
   text: string;
+  /** Pin to a specific slot (conversation continuity for replies). */
+  requiredSlot?: number;
   /** ModelOption id; absent = the account's default model. */
   model?: string;
 }
@@ -31,6 +33,7 @@ export interface PoolOptions {
 export class RuntimePool {
   private slots: Slot[] = [];
   private pending: PoolJob[] = [];
+  private jobSlots = new Map<string, number>();
 
   constructor(private options: PoolOptions) {}
 
@@ -47,7 +50,23 @@ export class RuntimePool {
     return this.pending.length;
   }
 
+  slotOf(jobId: string): number | undefined {
+    return this.jobSlots.get(jobId);
+  }
+
   dispatch(job: PoolJob): void {
+    if (job.requiredSlot !== undefined) {
+      const slot = this.slots[job.requiredSlot];
+      if (!slot) {
+        delete job.requiredSlot;
+      } else if (slot.currentJob === null) {
+        this.run(slot, job);
+        return;
+      } else {
+        this.pending.push(job);
+        return;
+      }
+    }
     const slot = this.idleSlot();
     if (slot) this.run(slot, job);
     else this.pending.push(job);
@@ -145,13 +164,21 @@ export class RuntimePool {
 
   private run(slot: Slot, job: PoolJob): void {
     slot.currentJob = job;
+    this.jobSlots.set(job.jobId, slot.index);
+    if (this.jobSlots.size > 200) {
+      const oldest = this.jobSlots.keys().next().value;
+      if (oldest !== undefined) this.jobSlots.delete(oldest);
+    }
     slot.runtime.sendMessage(job.text, job.model);
   }
 
   private finish(slot: Slot): void {
     if (!slot.currentJob) return;
     slot.currentJob = null;
-    const next = this.pending.shift();
-    if (next) this.run(slot, next);
+    const idx = this.pending.findIndex((j) => j.requiredSlot === undefined || j.requiredSlot === slot.index);
+    if (idx >= 0) {
+      const [next] = this.pending.splice(idx, 1);
+      this.run(slot, next!);
+    }
   }
 }

@@ -191,7 +191,12 @@ export class DaemonServer {
       case 'chat.send': {
         const refs = msg.payload.attachSelection ? this.options.cache.compactRefs() : [];
         const text = refs.length > 0 ? `${refs.join('\n')}\n\n${msg.payload.text}` : msg.payload.text;
-        this.options.pool.dispatch({ jobId: msg.payload.jobId ?? msg.id, text, model: msg.payload.model });
+        this.options.pool.dispatch({
+          jobId: msg.payload.jobId ?? msg.id,
+          text,
+          model: msg.payload.model,
+          requiredSlot: msg.payload.replyTo ? this.options.pool.slotOf(msg.payload.replyTo) : undefined,
+        });
         this.broadcast({ type: 'status', payload: { state: 'thinking' } });
         return;
       }
