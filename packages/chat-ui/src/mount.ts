@@ -1,16 +1,23 @@
 import { h, render, Fragment } from 'preact';
 import type { EngineState, EregionDevtoolsElement } from '@eregion/overlay';
-import { JobStore } from './store.js';
-import { Activity, type ActivityCallbacks } from './ui/activity.js';
-import { CommandBar } from './ui/command-bar.js';
+import { JobStore, type Job } from './store.js';
+import { JobPopover } from './ui/job-popover.js';
+import { PromptPopover } from './ui/prompt-popover.js';
+import { ApprovalModal, JobTray } from './ui/tray.js';
 import { CHAT_CSS } from './ui/styles.js';
 
 export const CHAT_TAG = 'eregion-chat';
 
+interface JobAnchor {
+  anchor: Element;
+  open: boolean;
+}
+
 /**
- * Fluxo principal: selecionar → prompt na command bar → job. O drawer é o
- * histórico (e chat livre, secundário). Compartilha o WS client e o engine
- * do overlay já montado.
+ * Tudo acontece junto ao componente: o prompt abre ancorado no clicado e,
+ * no Enter, vira o popover do job no mesmo lugar. Vários jobs = vários
+ * popovers, cada um no seu componente. Fechar um popover não cancela o
+ * job — ele vira uma pill na tray até terminar.
  */
 export function mountChat(overlay: EregionDevtoolsElement): HTMLElement | null {
   if (typeof document === 'undefined') return null;
@@ -31,9 +38,14 @@ export function mountChat(overlay: EregionDevtoolsElement): HTMLElement | null {
   const client = overlay.client;
   client?.onMessage((msg) => store.handle(msg));
 
+  const anchors = new Map<string, JobAnchor>();
+
   const dispatch = (prompt: string): void => {
-    const targets = overlay.engine.getState().selected.map((s) => s.name);
-    const job = store.dispatch(prompt, targets.length > 0 ? targets : ['conversa']);
+    const selected = overlay.engine.getState().selected;
+    const anchor = selected[selected.length - 1]?.element;
+    const targets = selected.map((s) => s.name);
+    const job = store.dispatch(prompt, targets.length > 0 ? targets : ['app']);
+    if (anchor) anchors.set(job.jobId, { anchor, open: true });
     client?.send({
       type: 'chat.send',
       payload: {
@@ -43,35 +55,61 @@ export function mountChat(overlay: EregionDevtoolsElement): HTMLElement | null {
         ...(job.model ? { model: job.model } : {}),
       },
     });
-    // O pedido virou job — a seleção cumpriu o papel e libera a próxima.
+    // A seleção virou job ancorado — libera o clique para o próximo componente.
     overlay.engine.clear();
+    rerender();
   };
 
-  const callbacks: ActivityCallbacks = {
-    onRevert(checkpointId) {
-      client?.send({ type: 'changes.revert', payload: { checkpointId } });
-    },
-    onPermission(requestId, allow) {
-      client?.send({ type: 'permission.respond', payload: { requestId, allow } });
-      store.permissionResolved();
-    },
-    onFreeChat(text) {
-      dispatch(text);
-    },
+  const setOpen = (jobId: string, open: boolean): void => {
+    const entry = anchors.get(jobId);
+    if (entry) {
+      entry.open = open;
+      rerender();
+    }
+  };
+
+  const onRevert = (checkpointId: string): void => {
+    client?.send({ type: 'changes.revert', payload: { checkpointId } });
   };
 
   const rerender = (ui = store.getState(), engine: EngineState = overlay.engine.getState()) => {
+    const anchored: Array<{ job: Job; anchor: Element }> = [];
+    const trayJobs: Job[] = [];
+    for (const job of ui.jobs) {
+      const entry = anchors.get(job.jobId);
+      if (!entry) continue;
+      if (entry.open) anchored.push({ job, anchor: entry.anchor });
+      else if (job.status === 'queued' || job.status === 'running') trayJobs.push(job);
+    }
+
     render(
       h(Fragment, null, [
-        h(CommandBar, {
-          key: 'cmd',
-          engine,
+        h(PromptPopover, {
+          key: 'ask',
+          selected: engine.selected,
           models: ui.models,
           selectedModel: ui.selectedModel,
           onModelChange: (id: string) => store.setSelectedModel(id),
           onDispatch: dispatch,
         }),
-        h(Activity, { key: 'act', state: ui, callbacks }),
+        ...anchored.map(({ job, anchor }) =>
+          h(JobPopover, {
+            key: job.jobId,
+            job,
+            anchor,
+            onClose: () => setOpen(job.jobId, false),
+            onRevert,
+          }),
+        ),
+        h(JobTray, { key: 'tray', jobs: trayJobs, onOpen: (id: string) => setOpen(id, true) }),
+        h(ApprovalModal, {
+          key: 'modal',
+          permission: ui.permission,
+          onRespond: (requestId: string, allow: boolean) => {
+            client?.send({ type: 'permission.respond', payload: { requestId, allow } });
+            store.permissionResolved();
+          },
+        }),
       ]),
       shadow,
     );

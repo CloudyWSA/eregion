@@ -1,10 +1,10 @@
-interface Pedido {
+interface Carro {
   id: string;
-  cliente: string;
-  total: string;
+  modelo: string;
+  preco: string;
 }
 
-export function OrderCard({ pedido }: { pedido: Pedido }) {
+export function CarCard({ carro }: { carro: Carro }) {
   return (
     <article
       style={{
@@ -17,9 +17,9 @@ export function OrderCard({ pedido }: { pedido: Pedido }) {
       }}
     >
       <strong style={{ fontSize: 18, textTransform: 'uppercase', letterSpacing: 1 }}>
-        {pedido.id}
+        {carro.modelo}
       </strong>{' '}
-      — {pedido.cliente}
+      — {carro.id}
       <div
         style={{
           marginTop: 8,
@@ -30,7 +30,7 @@ export function OrderCard({ pedido }: { pedido: Pedido }) {
           fontWeight: 700,
         }}
       >
-        {pedido.total}
+        {carro.preco}
       </div>
     </article>
   );

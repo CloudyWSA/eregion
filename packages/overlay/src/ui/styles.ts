@@ -11,12 +11,12 @@ export const OVERLAY_CSS = `
 .eg-box {
   position: fixed;
   z-index: 2147483646;
-  border: 1px solid #d08b5b99;
+  border: 1px solid #a8622fb0;
   border-radius: 3px;
   box-sizing: border-box;
 }
-.eg-box-hover { background: #d08b5b14; }
-.eg-box-selected { border-color: #d08b5b; background: #d08b5b1f; }
+.eg-box-hover { background: #a8622f10; }
+.eg-box-selected { border-color: #a8622f; background: #a8622f1a; }
 .eg-label {
   position: absolute;
   top: -20px;
@@ -25,14 +25,14 @@ export const OVERLAY_CSS = `
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  background: #101013;
-  border: 1px solid #26262c;
-  color: #d7d7dc;
+  background: #fbfbfc;
+  border: 1px solid #e4e4e9;
+  color: #1d1d22;
   font: 10.5px/1.6 ui-monospace, monospace;
   padding: 0 6px;
   border-radius: 3px;
 }
-.eg-box-selected .eg-label { border-color: #d08b5b66; color: #d08b5b; }
+.eg-box-selected .eg-label { border-color: #a8622f66; color: #a8622f; }
 .eg-toolbar {
   position: fixed;
   right: 16px;
@@ -41,26 +41,26 @@ export const OVERLAY_CSS = `
   display: flex;
   align-items: center;
   gap: 2px;
-  background: #101013;
-  border: 1px solid #26262c;
-  border-radius: 6px;
+  background: #fbfbfc;
+  border-radius: 4px;
+  box-shadow: 0 6px 24px rgba(24, 24, 28, 0.14), 0 0 0 1px #e4e4e9;
   padding: 3px 4px;
   font: 12px system-ui, sans-serif;
 }
 .eg-btn {
   all: unset;
   cursor: pointer;
-  color: #82828c;
+  color: #73737d;
   padding: 3px 8px;
-  border-radius: 4px;
+  border-radius: 3px;
   font-size: 13px;
   line-height: 1;
 }
-.eg-btn:hover { color: #d7d7dc; }
-.eg-btn:focus-visible { outline: 1px solid #d08b5b; }
-.eg-btn-on { color: #d08b5b; }
+.eg-btn:hover { color: #1d1d22; }
+.eg-btn:focus-visible { outline: 1px solid #a8622f; }
+.eg-btn-on { color: #a8622f; }
 .eg-dot { width: 6px; height: 6px; border-radius: 50%; margin: 0 5px; }
-.eg-dot-open { background: #8fae9a; }
+.eg-dot-open { background: #4e7a5a; }
 .eg-dot-connecting { background: #b8a06a; }
-.eg-dot-closed { background: #c98383; }
+.eg-dot-closed { background: #ad554b; }
 `;
