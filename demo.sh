@@ -8,6 +8,7 @@ cd "$(dirname "$0")"
 # token — clean up before starting.
 pkill -f 'daemon/dist/cli.js' 2>/dev/null || true
 pkill -f 'vite --port 5199' 2>/dev/null || true
+pkill -f 'api-node/src/server.mjs' 2>/dev/null || true
 sleep 1
 
 node packages/daemon/dist/cli.js "$@" &
@@ -15,6 +16,13 @@ DAEMON_PID=$!
 node examples/api-node/src/server.mjs &
 API_PID=$!
 trap 'kill $DAEMON_PID $API_PID 2>/dev/null' EXIT
+
+sleep 1
+if curl -sf -o /dev/null http://127.0.0.1:3199/api/orders; then
+  echo "- mock api ready on http://127.0.0.1:3199"
+else
+  echo "! mock api failed to start (port 3199 busy?)" >&2
+fi
 
 # give the daemon time to write .eregion/daemon.json before vite reads it
 sleep 2
