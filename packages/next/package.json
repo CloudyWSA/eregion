@@ -3,6 +3,17 @@
   "version": "0.1.0",
   "private": false,
   "type": "module",
+  "description": "Next.js integration for Eregion: select a component in your running app and let AI edit the real source, live.",
+  "keywords": [
+    "eregion",
+    "next",
+    "nextjs",
+    "ai",
+    "devtools",
+    "live-editing",
+    "hot-reload",
+    "claude"
+  ],
   "publishConfig": {
     "access": "public"
   },

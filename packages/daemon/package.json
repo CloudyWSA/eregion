@@ -3,6 +3,17 @@
   "version": "0.1.0",
   "private": false,
   "type": "module",
+  "description": "Eregion daemon (eregion-dev): a local pool of live Claude Agent SDK sessions with MCP instrumentation tools that edit your real frontend source.",
+  "keywords": [
+    "eregion",
+    "ai",
+    "ai-agent",
+    "claude-agent-sdk",
+    "devtools",
+    "live-editing",
+    "mcp",
+    "daemon"
+  ],
   "publishConfig": {
     "access": "public"
   },

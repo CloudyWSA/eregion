@@ -31,6 +31,14 @@ Each request becomes a **job** you watch live: the assistant's text and tool cal
 | **Backend traces** | With the Node/Bun agent installed, ask "what query is behind this?" and the AI answers from a real request trace (handler and SQL). |
 | **Safe by default** | Edits inside the workspace apply automatically (the diff is an audit you can revert). Bash and edits outside the workspace ask first. Flip to **review** to approve every edit, or **auto-run** to approve all. |
 
+## Use cases
+
+- **Fast frontend edits without leaving the browser** — click a component, say *"round the corners and add a subtle shadow,"* and watch it apply live.
+- **Edit many components at once, in parallel** — fire edits across different components at the same time, each in its own live session, without them mixing.
+- **Try several versions of one change** — generate 2–3 takes on the same request and keep the one you like.
+- **Change UI in plain language** — describe what you want; the AI resolves the source file and edits it, so you don't have to hunt for where a component lives.
+- **Full-stack in one motion** — ask what query backs a component, then edit the frontend and the backend behind it together.
+
 ## Principles
 
 - **Lazy context.** Selecting spends no tokens. The AI pulls source and traces on demand through MCP tools, so it never greps your whole repo.
@@ -166,6 +174,32 @@ pnpm install && pnpm build
 ```
 
 Open the app, fetch `http://localhost:3199/api/orders` from it, select the component that renders the result, and ask *"what query is behind this?"*.
+
+## FAQ
+
+**How do I edit React, Next.js, or Angular components with AI in real time?**
+Install Eregion (`npm create eregion@latest`), start your dev server, press **Alt+S**, click a component, and describe the change. The edit lands in your real source and hot-reload shows the result in the same window in seconds.
+
+**Can I edit multiple components at the same time?**
+Yes. The daemon runs a pool of live sessions (2 by default, more with `--parallel N`), so edits to different components run in parallel without mixing. You can also generate several variants of a single edit at once.
+
+**Does it change my real source code or just the DOM?**
+Your real source. Every edit is a file diff you can review and revert with one click — nothing is a throwaway DOM tweak.
+
+**How is this different from a visual page builder or browser devtools?**
+Visual builders generate their own markup and browser devtools only change the live DOM. Eregion edits your actual source files through the [Claude Agent SDK](https://docs.claude.com/en/api/agent-sdk/overview), so changes are permanent, reviewable diffs in your repo.
+
+**Won't it burn tokens on a large codebase?**
+No. Selecting a component spends no tokens; the AI pulls only the source it needs through MCP instrumentation tools, so a request costs about the size of your message, not the size of your repo.
+
+**Is my code sent anywhere?**
+The daemon runs locally on `127.0.0.1` behind a per-session token. Nothing leaves your machine beyond the calls the Claude Agent SDK already makes.
+
+**Which frameworks are supported?**
+React (Vite and Next.js) and Angular today, with Vue, Svelte, Solid, and more on the roadmap.
+
+**Do I need a separate API key?**
+No. Eregion reuses your existing Claude Code login.
 
 ## Roadmap: we're looking for contributors
 

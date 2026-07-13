@@ -3,6 +3,17 @@
   "version": "0.1.0",
   "private": false,
   "type": "module",
+  "description": "Eregion in-app overlay: click to select a component, describe a change, and watch AI edit the real source live.",
+  "keywords": [
+    "eregion",
+    "ai",
+    "devtools",
+    "overlay",
+    "visual-editing",
+    "live-editing",
+    "component-selector",
+    "frontend"
+  ],
   "publishConfig": {
     "access": "public"
   },

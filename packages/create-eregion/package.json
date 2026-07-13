@@ -25,7 +25,13 @@
     "devtools",
     "react",
     "next",
-    "angular"
+    "angular",
+    "live-editing",
+    "visual-editing",
+    "hot-reload",
+    "ai-agent",
+    "claude",
+    "frontend"
   ],
   "license": "MIT",
   "repository": {
