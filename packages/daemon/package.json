@@ -1,6 +1,6 @@
 {
   "name": "@eregion/daemon",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": false,
   "type": "module",
   "publishConfig": {
@@ -28,8 +28,7 @@
     "@eregion/protocol": "workspace:*",
     "ws": "^8.18.0",
     "zod": "^3.23.8",
-    "ts-morph": "^24.0.0",
-    "@angular/compiler": "^20.0.0"
+    "ts-morph": "^24.0.0"
   },
   "devDependencies": {
     "@types/ws": "^8.5.13"
@@ -38,5 +37,11 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/CloudyWSA/eregion.git"
-  }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false
 }

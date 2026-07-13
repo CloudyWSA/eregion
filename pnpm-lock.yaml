@@ -151,11 +151,10 @@ importers:
         specifier: ^3.23.8
         version: 3.25.76
 
+  packages/create-eregion: {}
+
   packages/daemon:
     dependencies:
-      '@angular/compiler':
-        specifier: ^20.0.0
-        version: 20.3.18
       '@anthropic-ai/claude-agent-sdk':
         specifier: 0.3.206
         version: 0.3.206(@anthropic-ai/sdk@0.110.0(zod@3.25.76))(@modelcontextprotocol/sdk@1.29.0(zod@3.25.76))(zod@3.25.76)
@@ -329,10 +328,6 @@ importers:
         version: 7.29.7
 
 packages:
-
-  '@angular/compiler@20.3.18':
-    resolution: {integrity: sha512-AaP/LCiDNcYmF135EEozjyR04NRBT38ZfBHQwjhgwiBBTejmvcpHwJaHSkraLpZqZzE4BQqqmgiQ1EJqxEwLVA==}
-    engines: {node: ^20.19.0 || ^22.12.0 || >=24.0.0}
 
   '@anthropic-ai/claude-agent-sdk-darwin-arm64@0.3.206':
     resolution: {integrity: sha512-FL2+NKcMMN47vcnCW2Fkt3AOgeRRlQxrisbPNaxrxqPJFzhUKs17x5j0XzLefd0xRbDAr74hd0PK/tnp6PHM6w==}
@@ -3202,10 +3197,6 @@ packages:
     resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
 
 snapshots:
-
-  '@angular/compiler@20.3.18':
-    dependencies:
-      tslib: 2.8.1
 
   '@anthropic-ai/claude-agent-sdk-darwin-arm64@0.3.206':
     optional: true

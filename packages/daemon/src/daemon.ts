@@ -16,7 +16,7 @@ import { RuntimePool } from './runtime-pool.js';
 import { DaemonServer } from './server.js';
 import { TraceStore } from './trace-store.js';
 
-export const VERSION = '0.0.0';
+export const VERSION = '0.1.0';
 const PORT_RANGE_START = 47100;
 const PORT_RANGE_END = 47199;
 /** Parallel sessions by default; each pays for its own cache prefix. */

@@ -1,0 +1,35 @@
+{
+  "name": "create-eregion",
+  "version": "0.1.0",
+  "private": false,
+  "type": "module",
+  "description": "Add Eregion to your app — detects your framework and installs only what you need.",
+  "publishConfig": {
+    "access": "public"
+  },
+  "bin": {
+    "create-eregion": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --target node18",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "eregion",
+    "ai",
+    "devtools",
+    "react",
+    "next",
+    "angular"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/CloudyWSA/eregion.git"
+  }
+}

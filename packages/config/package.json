@@ -1,6 +1,6 @@
 {
   "name": "@eregion/config",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": false,
   "type": "module",
   "publishConfig": {
@@ -25,5 +25,11 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/CloudyWSA/eregion.git"
-  }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false
 }
