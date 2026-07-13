@@ -292,10 +292,16 @@ export class SelectionEngine {
     }
   };
 
-  /** Mouse wheel moves up (deltaY < 0) or down the component hierarchy under the cursor. */
+  /**
+   * Wheel navigates the component hierarchy — but only where there is nothing to
+   * scroll. Over a scrollable region (or with Shift held) the wheel is left alone
+   * so the page and overflow containers behave normally: no scroll collision.
+   */
   private onWheel = (ev: WheelEvent): void => {
     const current = this.state.hover;
     if (!current) return;
+    const over = this.doc.elementsFromPoint(ev.clientX, ev.clientY)[0] ?? current.element;
+    if (!ev.shiftKey && this.scrollableUnder(over, ev.deltaY)) return;
     ev.preventDefault();
     if (ev.deltaY < 0) {
       const parent = current.element.parentElement && this.resolve(current.element.parentElement);
@@ -308,6 +314,26 @@ export class SelectionEngine {
       }
     }
   };
+
+  /** True when `el` or an ancestor can still scroll vertically in `deltaY`'s direction. */
+  private scrollableUnder(el: Element | null, deltaY: number): boolean {
+    for (let node: Element | null = el; node; node = node.parentElement) {
+      if (this.canScroll(node, deltaY)) return true;
+    }
+    return false;
+  }
+
+  private canScroll(el: Element, deltaY: number): boolean {
+    if (el.scrollHeight - el.clientHeight <= 1) return false;
+    const isRoot = el === this.doc.documentElement || el === this.doc.body || el === this.doc.scrollingElement;
+    if (!isRoot) {
+      const oy = this.doc.defaultView?.getComputedStyle(el).overflowY;
+      if (oy !== 'auto' && oy !== 'scroll' && oy !== 'overlay') return false;
+    }
+    if (deltaY > 0) return el.scrollTop + el.clientHeight < el.scrollHeight - 1;
+    if (deltaY < 0) return el.scrollTop > 0;
+    return true;
+  }
 
   toggleSelected(hit: ComponentHit): void {
     const idx = this.state.selected.findIndex((s) => s.element === hit.element);

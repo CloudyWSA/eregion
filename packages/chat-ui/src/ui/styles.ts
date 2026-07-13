@@ -79,6 +79,20 @@ button:focus-visible { outline: 1px solid var(--eg-accent); outline-offset: 1px;
 .eg-variants { color: var(--eg-muted); border: 1px solid var(--eg-line); border-radius: 3px; padding: 2px 6px; flex: none; }
 .eg-variants:hover { color: var(--eg-accent); border-color: var(--eg-accent); }
 .eg-variants-on { color: var(--eg-accent); border-color: var(--eg-accent); }
+.eg-approve {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--eg-muted);
+  border: 1px solid var(--eg-line);
+  border-radius: 3px;
+  padding: 2px 7px;
+  flex: none;
+  white-space: nowrap;
+}
+.eg-approve:hover { color: var(--eg-accent); border-color: var(--eg-accent); }
+.eg-approve-on { color: var(--eg-accent); border-color: var(--eg-accent); background: var(--eg-accent-soft); }
+.eg-approve-mark { font-size: 10px; }
 .eg-pin { color: var(--eg-accent); padding: 0 2px; font-size: 10px; }
 .eg-mentions { display: flex; flex-direction: column; border-top: 1px solid var(--eg-line); padding-top: 4px; }
 .eg-mention { display: flex; justify-content: space-between; gap: 10px; padding: 3px 4px; border-radius: 3px; color: var(--eg-ink); }

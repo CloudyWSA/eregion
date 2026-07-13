@@ -34,6 +34,21 @@ export function mountChat(overlay: EregionDevtoolsElement): HTMLElement | null {
   const client = overlay.client;
   client?.onMessage((msg) => store.handle(msg));
 
+  // Keep the daemon's permission mode in sync with the auto-approve toggle. The
+  // daemon resets to 'auto' on every new connection, so re-apply on reconnect.
+  let appliedMode: 'auto' | 'yolo' = 'auto';
+  const syncMode = (ui: ReturnType<JobStore['getState']>): void => {
+    if (!ui.connected) {
+      appliedMode = 'auto';
+      return;
+    }
+    const desired = ui.autoApprove ? 'yolo' : 'auto';
+    if (desired !== appliedMode) {
+      client?.send({ type: 'mode.set', payload: { mode: desired } });
+      appliedMode = desired;
+    }
+  };
+
   let consoleErrors: CapturedError[] = [];
 
   let pinned: { name: string; ref: string } | null = null;
@@ -156,6 +171,8 @@ export function mountChat(overlay: EregionDevtoolsElement): HTMLElement | null {
           onPin: setPinned,
           pageComponents: () => overlay.engine.pageComponents(),
           onModelChange: (id: string) => store.setSelectedModel(id),
+          autoApprove: ui.autoApprove,
+          onAutoApprove: (on: boolean) => store.setAutoApprove(on),
           onDispatch: dispatch,
         }),
         ...anchored.map(({ thread, anchor }) =>
@@ -193,7 +210,10 @@ export function mountChat(overlay: EregionDevtoolsElement): HTMLElement | null {
       shadow,
     );
   };
-  store.subscribe((ui) => rerender(ui, overlay.engine.getState()));
+  store.subscribe((ui) => {
+    syncMode(ui);
+    rerender(ui, overlay.engine.getState());
+  });
   overlay.engine.subscribe((engine) => rerender(store.getState(), engine));
   onErrors((errors) => {
     consoleErrors = errors;

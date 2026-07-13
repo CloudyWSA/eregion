@@ -12,9 +12,10 @@ function fakeRepo(daemon?: { port: number; token: string }): string {
   mkdirSync(path.join(dir, '.git'));
   if (daemon) {
     mkdirSync(path.join(dir, '.eregion'));
+    // pid = this test process → treated as a live daemon and reused (no spawn).
     writeFileSync(
       path.join(dir, '.eregion', 'daemon.json'),
-      JSON.stringify({ port: daemon.port, token: daemon.token, pid: 1234 }),
+      JSON.stringify({ port: daemon.port, token: daemon.token, pid: process.pid }),
     );
   }
   return dir;
@@ -58,7 +59,7 @@ describe('withEregion', () => {
       module: { ...config.module, rules: [...(config.module?.rules ?? []), userRule] },
     }));
 
-    const result = withEregion({ webpack: userWebpack });
+    const result = withEregion({ webpack: userWebpack }, { noDaemon: true });
     const finalConfig = result.webpack!({ module: { rules: [] } }, { dev: true, isServer: false });
 
     expect(userWebpack).toHaveBeenCalled();
@@ -75,9 +76,10 @@ describe('withEregion', () => {
     process.env.NODE_ENV = 'development';
     withCwd(fakeRepo());
 
-    const result = withEregion({
-      turbopack: { resolveAlias: { foo: 'bar' }, rules: { '*.svg': { loaders: ['svg-loader'] } } },
-    });
+    const result = withEregion(
+      { turbopack: { resolveAlias: { foo: 'bar' }, rules: { '*.svg': { loaders: ['svg-loader'] } } } },
+      { noDaemon: true },
+    );
 
     expect(result.turbopack?.resolveAlias).toEqual({ foo: 'bar' });
     expect(result.turbopack?.rules?.['*.svg']).toEqual({ loaders: ['svg-loader'] });
@@ -85,7 +87,7 @@ describe('withEregion', () => {
     expect(result.turbopack?.rules?.['*.jsx']).toEqual({ loaders: [LOADER] });
   });
 
-  it('injects env with port/token when .eregion/daemon.json exists', () => {
+  it('reuses a live daemon and injects its port/token as env', () => {
     process.env.NODE_ENV = 'development';
     withCwd(fakeRepo({ port: 4321, token: 'tok-abc' }));
 
@@ -98,11 +100,11 @@ describe('withEregion', () => {
     });
   });
 
-  it('without daemon.json does not inject eregion env', () => {
+  it('with noDaemon does not start a daemon or inject eregion env', () => {
     process.env.NODE_ENV = 'development';
     withCwd(fakeRepo());
 
-    const result = withEregion({ env: { EXISTING: '1' } });
+    const result = withEregion({ env: { EXISTING: '1' } }, { noDaemon: true });
 
     expect(result.env).toEqual({ EXISTING: '1' });
   });

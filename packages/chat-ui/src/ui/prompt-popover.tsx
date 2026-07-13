@@ -13,10 +13,12 @@ interface Props {
   onPin(value: { name: string; ref: string } | null): void;
   pageComponents(): PageComponent[];
   onModelChange(id: string): void;
+  autoApprove: boolean;
+  onAutoApprove(on: boolean): void;
   onDispatch(prompt: string, variants: number, images: ChatImage[]): void;
 }
 
-export function PromptPopover({ selected, area, models, skills, selectedModel, pinned, onPin, pageComponents, onModelChange, onDispatch }: Props) {
+export function PromptPopover({ selected, area, models, skills, selectedModel, pinned, onPin, pageComponents, onModelChange, autoApprove, onAutoApprove, onDispatch }: Props) {
   const [prompt, setPrompt] = useState('');
   const [variants, setVariants] = useState(1);
   const [images, setImages] = useState<ChatImage[]>([]);
@@ -117,6 +119,17 @@ export function PromptPopover({ selected, area, models, skills, selectedModel, p
               </span>
             )}
           </span>
+          <button
+            class={`eg-approve ${autoApprove ? 'eg-approve-on' : ''}`}
+            title={
+              autoApprove
+                ? 'Auto-approve is on — tools like Bash run without asking (this session)'
+                : 'Auto-approve tool actions (Bash included) without a prompt'
+            }
+            onClick={() => onAutoApprove(!autoApprove)}
+          >
+            <span class="eg-approve-mark">{autoApprove ? '✓' : '○'}</span> auto-run
+          </button>
           <button
             class={`eg-variants ${variants > 1 ? 'eg-variants-on' : ''}`}
             title="Generate N alternative versions in parallel (pick one, revert the rest)"

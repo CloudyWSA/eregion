@@ -1,7 +1,7 @@
 import path from 'node:path';
 import type { CanUseTool, PermissionResult } from '@anthropic-ai/claude-agent-sdk';
 
-export type PermissionMode = 'auto' | 'review';
+export type PermissionMode = 'auto' | 'review' | 'yolo';
 
 export interface PermissionRequestEvent {
   requestId: string;
@@ -37,8 +37,9 @@ function summarize(toolName: string, input: Record<string, unknown>): { summary:
 /**
  * Bridge between the Agent SDK's `canUseTool` and the approval modal in the
  * overlay. Auto mode (default): file edits inside the workspaces pass without
- * friction (the chat diff card is an audit, not a gate). Review mode: every
- * edit asks for approval. Bash and paths outside the workspace always ask.
+ * friction (the chat diff card is an audit, not a gate); Bash and paths outside
+ * the workspace always ask. Review mode: every edit asks for approval. Yolo
+ * mode: auto-approve everything, including Bash — no prompts.
  */
 export class PermissionBroker {
   mode: PermissionMode = 'auto';
@@ -72,7 +73,7 @@ export class PermissionBroker {
   }
 
   canUseTool: CanUseTool = async (toolName, input, { signal }) => {
-    if (ALWAYS_ALLOWED.has(toolName) || toolName.startsWith('mcp__eregion__')) {
+    if (this.mode === 'yolo' || ALWAYS_ALLOWED.has(toolName) || toolName.startsWith('mcp__eregion__')) {
       return { behavior: 'allow', updatedInput: input };
     }
     if (FS_EDIT_TOOLS.has(toolName) && this.mode === 'auto' && this.withinWorkspace(input)) {

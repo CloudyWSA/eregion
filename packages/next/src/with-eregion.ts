@@ -1,7 +1,7 @@
 // withEregion — injects JSX tagging (data-eg-src) into both Next bundlers
 // (webpack and Turbopack), dev only. It does not depend on the `next` package:
 // the types below are structural (only the fields we touch).
-import { findRepoRoot, readDaemonInfo } from '@eregion/config';
+import { ensureDaemonSync } from '@eregion/build/daemon';
 
 const LOADER = '@eregion/build/loader';
 
@@ -53,14 +53,16 @@ export interface NextConfigLike {
 }
 
 /**
- * Reads `.eregion/daemon.json` (if the daemon is up) and returns the public env
- * vars `EregionDevtools` uses to publish `window.__EREGION__`.
- *
- * Limitation: this runs once, when next.config loads — if the daemon starts
- * after `next dev`, restart `next dev` for the app to see the new port/token.
+ * Starts the daemon (if not already running) as next.config loads and returns
+ * the public env vars `EregionDevtools` uses to publish `window.__EREGION__`.
+ * Blocks briefly until the daemon is ready so the values are present on boot.
  */
-function daemonEnv(): Record<string, string> {
-  const info = readDaemonInfo(findRepoRoot(process.cwd()));
+function daemonEnv(options: EregionNextOptions): Record<string, string> {
+  if (options.noDaemon) return {};
+  const info = ensureDaemonSync({
+    parallel: options.parallel,
+    log: (msg) => console.log(`⟡ eregion: ${msg}`),
+  });
   if (!info) return {};
   return {
     NEXT_PUBLIC_EREGION_PORT: String(info.port),
@@ -90,12 +92,20 @@ function withWebpackRule(previous: WebpackFn | undefined): WebpackFn {
   };
 }
 
+export interface EregionNextOptions {
+  /** Max parallel AI sessions when the wrapper starts the daemon; default 2. */
+  parallel?: number;
+  /** Skip starting the daemon (run `npx eregion-dev` yourself). */
+  noDaemon?: boolean;
+}
+
 /**
  * `next.config` wrapper: injects JSX tagging into both bundlers (webpack and
- * Turbopack) and publishes the daemon connection config via `env`. Dev only —
- * in production it returns `nextConfig` untouched, since tagging exposes repo paths.
+ * Turbopack), starts the daemon alongside `next dev`, and publishes the daemon
+ * connection config via `env`. Dev only — in production it returns `nextConfig`
+ * untouched, since tagging exposes repo paths.
  */
-export function withEregion(nextConfig: NextConfigLike = {}): NextConfigLike {
+export function withEregion(nextConfig: NextConfigLike = {}, options: EregionNextOptions = {}): NextConfigLike {
   if (process.env.NODE_ENV === 'production') return nextConfig;
 
   return {
@@ -111,7 +121,7 @@ export function withEregion(nextConfig: NextConfigLike = {}): NextConfigLike {
     },
     env: {
       ...nextConfig.env,
-      ...daemonEnv(),
+      ...daemonEnv(options),
     },
   };
 }

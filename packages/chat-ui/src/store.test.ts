@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { JobStore } from './store.js';
+import { JobStore, jobSteps, type Job } from './store.js';
+
+const answerOf = (job: Job): string =>
+  job.timeline.filter((b) => b.kind === 'text').map((b) => (b as { text: string }).text).join('');
 
 const usage = { inputTokens: 10, outputTokens: 200, cacheReadTokens: 28000, costUsd: 0.02 };
 
@@ -21,8 +24,24 @@ describe('JobStore', () => {
     store.handle({ type: 'chat.result', payload: { usage, durationMs: 3000 } });
 
     const [job] = store.getState().jobs;
-    expect(job).toMatchObject({ status: 'done', answer: 'Applied.', targets: ['Header'], usage });
+    expect(job).toMatchObject({ status: 'done', targets: ['Header'], usage });
+    expect(answerOf(job!)).toBe('Applied.');
     expect(store.getState().totals).toMatchObject({ jobs: 1, outputTokens: 200, costUsd: 0.02 });
+  });
+
+  it('preserves text→tool→text order in the timeline', () => {
+    const store = new JobStore();
+    store.dispatch('x', ['A']);
+    store.handle({ type: 'chat.delta', payload: { text: 'Let me check the file.' } });
+    store.handle({ type: 'chat.tool', payload: { name: 'read', label: 'Read src/a.tsx', status: 'running' } });
+    store.handle({ type: 'chat.tool', payload: { name: 'read', label: 'Read src/a.tsx', status: 'done' } });
+    store.handle({ type: 'chat.delta', payload: { text: 'It exports a Button.' } });
+
+    expect(store.getState().jobs[0]!.timeline).toEqual([
+      { kind: 'text', text: 'Let me check the file.' },
+      { kind: 'tool', name: 'read', label: 'Read src/a.tsx', status: 'done' },
+      { kind: 'text', text: 'It exports a Button.' },
+    ]);
   });
 
   it('interleaved events from PARALLEL jobs do not mix (assigned by jobId)', () => {
@@ -38,9 +57,12 @@ describe('JobStore', () => {
     store.handle({ type: 'chat.result', payload: { usage, durationMs: 2000, jobId: a.jobId } });
 
     const [jobA, jobB] = store.getState().jobs;
-    expect(jobA).toMatchObject({ status: 'done', answer: 'Editing the Header… done.', events: [] });
-    expect(jobB).toMatchObject({ status: 'done', answer: 'Adjusting the cards…' });
-    expect(jobB!.events).toMatchObject([{ kind: 'edit', label: 'src/OrderCard.tsx' }]);
+    expect(jobA!.status).toBe('done');
+    expect(answerOf(jobA!)).toBe('Editing the Header… done.');
+    expect(jobSteps(jobA!)).toEqual([]);
+    expect(jobB!.status).toBe('done');
+    expect(answerOf(jobB!)).toBe('Adjusting the cards…');
+    expect(jobSteps(jobB!)).toMatchObject([{ kind: 'edit', label: 'src/OrderCard.tsx' }]);
     expect(store.getState().totals.jobs).toBe(2);
   });
 
@@ -55,8 +77,10 @@ describe('JobStore', () => {
     store.handle({ type: 'chat.delta', payload: { text: 'answer for the second' } });
 
     const [a, b] = store.getState().jobs;
-    expect(a).toMatchObject({ status: 'done', answer: 'answer for the first' });
-    expect(b).toMatchObject({ status: 'running', answer: 'answer for the second' });
+    expect(a!.status).toBe('done');
+    expect(answerOf(a!)).toBe('answer for the first');
+    expect(b!.status).toBe('running');
+    expect(answerOf(b!)).toBe('answer for the second');
   });
 
   it('running tool updates in-place to its final status', () => {
@@ -64,7 +88,7 @@ describe('JobStore', () => {
     store.dispatch('x', ['A']);
     store.handle({ type: 'chat.tool', payload: { name: 't', label: 'get_selection', status: 'running' } });
     store.handle({ type: 'chat.tool', payload: { name: 't', label: 'get_selection', status: 'done' } });
-    expect(store.getState().jobs[0]!.events).toEqual([
+    expect(jobSteps(store.getState().jobs[0]!)).toEqual([
       { kind: 'tool', name: 't', label: 'get_selection', status: 'done' },
     ]);
   });
@@ -76,7 +100,7 @@ describe('JobStore', () => {
     store.handle({ type: 'error', payload: { code: 'rate_limit', message: 'window exhausted' } });
     const job = store.getState().jobs[0]!;
     expect(job.status).toBe('failed');
-    expect(job.events).toMatchObject([
+    expect(jobSteps(job)).toMatchObject([
       { kind: 'edit', label: 'src/a.tsx', checkpointId: 'c1' },
       { kind: 'error', label: 'rate_limit' },
     ]);
@@ -97,6 +121,15 @@ describe('JobStore', () => {
     store.setSelectedModel('sonnet');
     const withModel = store.dispatch('y', ['B']);
     expect(withModel).toMatchObject({ model: 'sonnet', modelName: 'Sonnet' });
+  });
+
+  it('auto-approve defaults off and toggles', () => {
+    const store = new JobStore();
+    expect(store.getState().autoApprove).toBe(false);
+    store.setAutoApprove(true);
+    expect(store.getState().autoApprove).toBe(true);
+    store.setAutoApprove(false);
+    expect(store.getState().autoApprove).toBe(false);
   });
 
   it('permission.request exposes the pending item and permissionResolved clears it', () => {

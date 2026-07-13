@@ -80,6 +80,19 @@ describe('PermissionBroker', () => {
     );
     expect(result?.behavior).toBe('allow');
   });
+
+  it('yolo mode auto-approves Bash without asking', async () => {
+    const broker = new PermissionBroker([workspace], () => {
+      throw new Error('should not ask');
+    });
+    broker.mode = 'yolo';
+    const result = await broker.canUseTool(
+      'Bash',
+      { command: 'npm test' },
+      { signal: new AbortController().signal, suggestions: [], toolUseID: 'tu1', requestId: 'req1' },
+    );
+    expect(result?.behavior).toBe('allow');
+  });
 });
 
 describe('DaemonServer', () => {

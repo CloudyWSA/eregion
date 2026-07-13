@@ -1,6 +1,7 @@
-import { Fragment } from 'preact';
+import { Fragment, type ComponentChild } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
-import type { Job, JobEvent, JobStatus } from '../store.js';
+import type { Job, JobEvent, JobStatus, TimelineBlock } from '../store.js';
+import { jobSteps } from '../store.js';
 import { Anchored, type AnchorTarget } from './anchored.js';
 import { DiffView } from './diff.js';
 import { Markdown } from './markdown.js';
@@ -72,6 +73,34 @@ function Step({ ev, onRevert }: { ev: JobEvent; onRevert(id: string): void }) {
   );
 }
 
+/** Renders the timeline in order: text runs as prose, consecutive steps grouped. */
+function Timeline({ blocks, onRevert }: { blocks: TimelineBlock[]; onRevert(id: string): void }) {
+  const out: ComponentChild[] = [];
+  let steps: JobEvent[] = [];
+  const flush = () => {
+    if (steps.length === 0) return;
+    const group = steps;
+    steps = [];
+    out.push(
+      <div class="eg-steps" key={`s${out.length}`}>
+        {group.map((ev, i) => (
+          <Step key={i} ev={ev} onRevert={onRevert} />
+        ))}
+      </div>,
+    );
+  };
+  for (const block of blocks) {
+    if (block.kind === 'text') {
+      flush();
+      if (block.text.trim()) out.push(<Markdown key={`t${out.length}`} text={block.text} />);
+    } else {
+      steps.push(block);
+    }
+  }
+  flush();
+  return <Fragment>{out}</Fragment>;
+}
+
 interface Props {
   thread: Job[];
   anchor: AnchorTarget;
@@ -121,19 +150,12 @@ export function JobPopover({ thread, anchor, onClose, onRevert, onReply }: Props
           {thread.map((turn, ti) => (
             <Fragment key={turn.jobId}>
               {ti > 0 && <div class="eg-turn-prompt">{turn.prompt}</div>}
-              {turn.events.length > 0 && (
-                <div class="eg-steps">
-                  {turn.events.map((ev, i) => (
-                    <Step key={i} ev={ev} onRevert={onRevert} />
-                  ))}
-                </div>
-              )}
-              {turn.answer && <Markdown text={turn.answer} />}
+              <Timeline blocks={turn.timeline} onRevert={onRevert} />
             </Fragment>
           ))}
         </div>
         <footer class="eg-foot">
-          {last.status === 'done' && thread.some((t) => t.events.some((e) => e.kind === 'edit')) && (
+          {last.status === 'done' && thread.some((t) => jobSteps(t).some((e) => e.kind === 'edit')) && (
             <button
               class="eg-commit"
               title="Ask the assistant to commit this job's changes"

@@ -17,6 +17,15 @@ export interface JobEvent {
   status?: 'running' | 'done' | 'error';
 }
 
+/** A run of assistant prose, kept as its own ordered block. */
+export interface TextBlock {
+  kind: 'text';
+  text: string;
+}
+
+/** The assistant's output as it arrived: prose and steps interleaved in order. */
+export type TimelineBlock = TextBlock | JobEvent;
+
 export interface Job {
   id: number;
   /** Thread root: replies share the first turn's rootId. */
@@ -29,8 +38,8 @@ export interface Job {
   /** Names of the components selected at dispatch (job chips). */
   targets: string[];
   status: JobStatus;
-  answer: string;
-  events: JobEvent[];
+  /** Assistant output in arrival order: text runs and steps interleaved. */
+  timeline: TimelineBlock[];
   usage?: ChatUsage;
   durationMs?: number;
   plan?: PlanItem[];
@@ -55,19 +64,41 @@ export interface UiState {
   skills: SkillOption[];
   /** Current dev choice; 'default' = account default model. */
   selectedModel: string;
+  /** Auto-approve every tool action (Bash included) without a prompt. */
+  autoApprove: boolean;
   /** Session-accumulated usage (drawer meter). */
   totals: { outputTokens: number; costUsd: number; jobs: number };
 }
 
 type Listener = (state: UiState) => void;
 
-const STORAGE_KEY = 'eregion.jobs.v1';
+const STORAGE_KEY = 'eregion.jobs.v2';
 
-function loadPersisted(): { jobs: Job[]; totals: UiState['totals'] } | null {
+/** Steps (tool/edit/error) are the non-text blocks of the timeline. */
+export function jobSteps(job: Job): JobEvent[] {
+  return job.timeline.filter((b): b is JobEvent => b.kind !== 'text');
+}
+
+/** Appends streamed text to the trailing text run, or opens a new one. */
+function appendText(timeline: TimelineBlock[], text: string): TimelineBlock[] {
+  const last = timeline[timeline.length - 1];
+  if (last && last.kind === 'text') {
+    return [...timeline.slice(0, -1), { kind: 'text', text: last.text + text }];
+  }
+  return [...timeline, { kind: 'text', text }];
+}
+
+interface Persisted {
+  jobs: Job[];
+  totals: UiState['totals'];
+  autoApprove?: boolean;
+}
+
+function loadPersisted(): Persisted | null {
   try {
     const raw = sessionStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    const data = JSON.parse(raw) as { jobs: Job[]; totals: UiState['totals'] };
+    const data = JSON.parse(raw) as Persisted;
     // running jobs from a dead page can never finish — surface them as failed
     for (const job of data.jobs) {
       if (job.status === 'running' || job.status === 'queued') job.status = 'failed';
@@ -86,6 +117,7 @@ export class JobStore {
     models: [],
     skills: [],
     selectedModel: 'default',
+    autoApprove: false,
     totals: { outputTokens: 0, costUsd: 0, jobs: 0 },
   };
   private listeners = new Set<Listener>();
@@ -95,7 +127,7 @@ export class JobStore {
     if (typeof sessionStorage === 'undefined') return;
     const saved = loadPersisted();
     if (saved) {
-      this.state = { ...this.state, jobs: saved.jobs, totals: saved.totals };
+      this.state = { ...this.state, jobs: saved.jobs, totals: saved.totals, autoApprove: saved.autoApprove ?? false };
       this.nextJobId = saved.jobs.reduce((max, j) => Math.max(max, j.id), 0) + 1;
     }
   }
@@ -104,7 +136,8 @@ export class JobStore {
     if (typeof sessionStorage === 'undefined') return;
     try {
       const jobs = this.state.jobs.slice(-30);
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ jobs, totals: this.state.totals }));
+      const data: Persisted = { jobs, totals: this.state.totals, autoApprove: this.state.autoApprove };
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     } catch {
       // storage full — history is a convenience, never an error
     }
@@ -123,7 +156,7 @@ export class JobStore {
   private emit(patch: Partial<UiState>): void {
     this.state = { ...this.state, ...patch };
     for (const fn of this.listeners) fn(this.state);
-    if ('jobs' in patch || 'totals' in patch) this.persist();
+    if ('jobs' in patch || 'totals' in patch || 'autoApprove' in patch) this.persist();
   }
 
   // Owning job for an event: by jobId when stamped (parallel pool); without
@@ -145,6 +178,10 @@ export class JobStore {
     this.emit({ selectedModel: id });
   }
 
+  setAutoApprove(on: boolean): void {
+    this.emit({ autoApprove: on });
+  }
+
   dispatch(prompt: string, targets: string[], opts: { rootId?: string } = {}): Job {
     const id = this.nextJobId++;
     const chosen =
@@ -159,8 +196,7 @@ export class JobStore {
       prompt,
       targets,
       status: 'queued',
-      answer: '',
-      events: [],
+      timeline: [],
       startedAt: Date.now(),
       model: chosen?.id,
       modelName: chosen?.name,
@@ -202,33 +238,30 @@ export class JobStore {
         return;
       case 'chat.delta': {
         const idx = this.targetIndex(msg.payload.jobId);
-        this.patchJob(idx, (job) => ({ status: 'running', answer: job.answer + msg.payload.text }));
+        this.patchJob(idx, (job) => ({ status: 'running', timeline: appendText(job.timeline, msg.payload.text) }));
         return;
       }
       case 'chat.tool': {
         const idx = this.targetIndex(msg.payload.jobId);
         this.patchJob(idx, (job) => {
-          const events = [...job.events];
-          let found = false;
-          for (let i = events.length - 1; i >= 0; i -= 1) {
-            const ev = events[i]!;
-            if (ev.kind === 'tool' && (ev.name ?? ev.label) === msg.payload.name && ev.status === 'running') {
-              events[i] = { ...ev, label: msg.payload.label, status: msg.payload.status };
-              found = true;
-              break;
+          const timeline = [...job.timeline];
+          for (let i = timeline.length - 1; i >= 0; i -= 1) {
+            const b = timeline[i]!;
+            if (b.kind === 'tool' && (b.name ?? b.label) === msg.payload.name && b.status === 'running') {
+              timeline[i] = { ...b, label: msg.payload.label, status: msg.payload.status };
+              return { status: 'running', timeline };
             }
           }
-          if (!found)
-            events.push({ kind: 'tool', name: msg.payload.name, label: msg.payload.label, status: msg.payload.status });
-          return { status: 'running', events };
+          timeline.push({ kind: 'tool', name: msg.payload.name, label: msg.payload.label, status: msg.payload.status });
+          return { status: 'running', timeline };
         });
         return;
       }
       case 'edit.applied': {
         const idx = this.targetIndex(msg.payload.jobId);
         this.patchJob(idx, (job) => ({
-          events: [
-            ...job.events,
+          timeline: [
+            ...job.timeline,
             { kind: 'edit', label: msg.payload.file, detail: msg.payload.diff, checkpointId: msg.payload.checkpointId },
           ],
         }));
@@ -254,7 +287,7 @@ export class JobStore {
         if (idx >= 0) {
           this.patchJob(idx, (job) => ({
             status: 'failed',
-            events: [...job.events, { kind: 'error', label: msg.payload.code, detail: msg.payload.message }],
+            timeline: [...job.timeline, { kind: 'error', label: msg.payload.code, detail: msg.payload.message }],
           }));
         }
         return;

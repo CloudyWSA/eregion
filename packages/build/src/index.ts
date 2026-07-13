@@ -2,18 +2,24 @@
 // For Next+Turbopack, use the standalone loader: '@eregion/build/loader' in turbopack.rules.
 import { createUnplugin } from 'unplugin';
 import { findRepoRoot, readDaemonInfo } from '@eregion/config';
+import { ensureDaemon } from './daemon-runner.js';
 import { shouldProcess, tagJsx, type TagOptions } from './transform.js';
 
 export const PKG = '@eregion/build' as const;
 export { eregionTagPlugin, tagJsx, type TagOptions } from './transform.js';
 export { findRepoRoot } from '@eregion/config';
 export { TAG_ATTR } from '@eregion/protocol';
+export { ensureDaemon, ensureDaemonSync, type DaemonRunnerOptions } from './daemon-runner.js';
 
 export interface BuildOptions extends TagOptions {
   /** App name shown in the daemon/chat; default: no name. */
   appName?: string;
   /** Cross-origin backends that accept the traceparent header. */
   traceOrigins?: string[];
+  /** Max parallel AI sessions when the plugin starts the daemon; default 2. */
+  parallel?: number;
+  /** Skip starting the daemon (run `npx eregion-dev` yourself). */
+  noDaemon?: boolean;
 }
 
 /**
@@ -53,6 +59,19 @@ export const EregionBuild = createUnplugin<BuildOptions | undefined>((options) =
           exclude: ['@eregion/overlay', '@eregion/chat-ui', '@eregion/adapter-react', '@eregion/adapter-angular'],
         },
       };
+    },
+    // Start the daemon with the dev server (like any library — the user just
+    // runs their project). Awaited so daemon.json exists before the first request.
+    async configureServer(server: { config: { logger: { info(msg: string): void } } }) {
+      if (options?.noDaemon) return;
+      try {
+        await ensureDaemon({
+          parallel: options?.parallel,
+          log: (msg) => server.config.logger.info(`⟡ eregion: ${msg}`),
+        });
+      } catch {
+        // never let a daemon hiccup break the dev server
+      }
     },
     transformIndexHtml() {
       const script = daemonConfigScript(options);

@@ -157,6 +157,42 @@ describe('SelectionEngine', () => {
     expect(payload.app.components).toContainEqual({ name: 'Card', src: { file: 'src/Card.tsx', line: 9, column: 5 }, count: 2 });
   });
 
+  it('wheel scrolls a scrollable container instead of hijacking it (no collision)', () => {
+    document.body.innerHTML = `<main id="root"><div id="scroller">x</div></main>`;
+    setTag(document.getElementById('root')!, 'src/App.tsx', 3);
+    setTag(document.getElementById('scroller')!, 'src/List.tsx', 5);
+    const scroller = document.getElementById('scroller') as HTMLElement;
+    scroller.style.overflowY = 'auto';
+    Object.defineProperty(scroller, 'scrollHeight', { value: 500, configurable: true });
+    Object.defineProperty(scroller, 'clientHeight', { value: 100, configurable: true });
+    Object.defineProperty(scroller, 'scrollTop', { value: 0, writable: true, configurable: true });
+
+    const engine = new SelectionEngine();
+    mockPoint(scroller);
+    engine.enable();
+    document.dispatchEvent(new MouseEvent('pointermove', { bubbles: true }));
+    expect(engine.getState().hover?.element).toBe(scroller);
+
+    const wheel = new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: 120 });
+    document.dispatchEvent(wheel);
+    expect(wheel.defaultPrevented).toBe(false); // left for the browser to scroll
+    expect(engine.getState().hover?.element).toBe(scroller); // hierarchy untouched
+  });
+
+  it('wheel navigates to the parent component where there is nothing to scroll', () => {
+    const b1 = document.getElementById('b1')!;
+    const engine = new SelectionEngine();
+    mockPoint(b1);
+    engine.enable();
+    document.dispatchEvent(new MouseEvent('pointermove', { bubbles: true }));
+    expect(engine.getState().hover?.element).toBe(b1);
+
+    const wheel = new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: -120 });
+    document.dispatchEvent(wheel);
+    expect(wheel.defaultPrevented).toBe(true);
+    expect(engine.getState().hover?.element).toBe(document.getElementById('root'));
+  });
+
   it('cursor over Eregion UI yields no hit (does not select what is behind)', () => {
     const overlayEl = document.createElement('eregion-chat');
     document.body.appendChild(overlayEl);

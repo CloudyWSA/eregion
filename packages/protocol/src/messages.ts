@@ -67,7 +67,9 @@ export const ClientMessage = z.discriminatedUnion('type', [
   }),
   z.object({
     type: z.literal('mode.set'),
-    payload: z.object({ mode: z.enum(['auto', 'review']) }),
+    // auto: edits in the workspace pass, Bash asks · review: every edit asks ·
+    // yolo: auto-approve everything, including Bash.
+    payload: z.object({ mode: z.enum(['auto', 'review', 'yolo']) }),
   }),
   z.object({
     type: z.literal('changes.revert'),
